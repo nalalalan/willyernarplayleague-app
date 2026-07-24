@@ -1,27 +1,27 @@
 {
   "schema_version": 2,
   "artifact": "integrated-text-chart-composition",
-  "implementation_commit": "59deefb978549cab5db40cadfef6ebb104c6e0b3",
+  "implementation_commit": "9cb8f3195787cafd1f2f3657de8d54fc630c668d",
   "source_sha256": {
     "public/chart.js": "1941C26E05F0B0B9E6FB72A7CDDA96DD27C9247317A2D4B8FE9C4AA6EA53602C",
     "public/styles.css": "FCCA04F26BE983A9BFC0689411DBDEB259A4DB15FADB6A1A32CC82F9081960A2",
-    "lib/view.js": "DA3184D80EE4F1397E851BEDC1A36739F855164E1A35D683C2840FA56922C7E6",
+    "lib/view.js": "428C975084D8765D7EE0F1764B3638CA4397254DAF9D4BCFFBDA238D2EAF7D1D",
     "public/app.js": "97A5CE1874915D8D335F464714547279438DB0DF4CD1AEBB835EEE0453A4B683",
-    "public/icon.svg": "60401A8F1CBF56AE779EF105D4CFA7243090CB304E62D2981B37F4C519D3D292",
-    "public/site.webmanifest": "27101E0F77C1857F93DF61DB2B478B4886FD6105AA9CB776F26727A461DC6FD8"
+    "public/icon.svg": "CE1D183C8C7BC7300A6A434DBA3D14F5C8C2775DD88AA0A26027ED58BC677CB7",
+    "public/site.webmanifest": "34101539737AEBB70DF737BC6DFEB9FBD1222C9869C17657AC326F54CAD79636"
   },
   "identity": {
     "concept": "yernar considering league",
-    "portrait_cues": ["deep Norwood 3 temple recession", "dominant tall forehead", "narrow almond-shaped eyes", "flat cheek taper", "short small chin"],
+    "portrait_cues": ["deep connected Norwood 3 temple recession", "thin temple hair anchored to the skull", "dominant tall forehead", "narrow almond-shaped eyes", "flat cheek taper", "short small chin"],
     "question_cue": "league emblem thought bubble with visible question mark",
     "glasses_present": false,
-    "expression_cues": ["uneven worried brows", "off-center pupils", "wavy uncertain mouth", "anxiety sweat mark"],
+    "expression_cues": ["high pinched worried brows", "wide uneven eyes", "opposed off-center pupils", "trembling multi-wave mouth", "under-eye stress lines", "multiple panic sweat marks"],
     "transparent_canvas": true,
     "full_tile_background": false,
     "circular_footprint": true,
     "shoulders_and_chest_present": false,
     "face_shape": "dominant tall forehead with flat cheeks tapering to a short small chin",
-    "app_and_hub_svg_sha256": "60401A8F1CBF56AE779EF105D4CFA7243090CB304E62D2981B37F4C519D3D292",
+    "app_and_hub_svg_sha256": "CE1D183C8C7BC7300A6A434DBA3D14F5C8C2775DD88AA0A26027ED58BC677CB7",
     "verified_scales_px": [214, 72, 32]
   },
   "renderer_parity": {
