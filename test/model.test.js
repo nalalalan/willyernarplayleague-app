@@ -12,6 +12,7 @@ const {
   calculateCandidates,
   computeForecast,
   deriveAdaptiveWeights,
+  detectCrashCycle,
   evaluateCalibration,
   systematicResample
 } = require('../lib/model');
@@ -34,6 +35,7 @@ function scoreRow(index, overrides = {}) {
     dayOfWeek: candidate,
     weeklyCadence: candidate,
     monthlyCadence: candidate,
+    crashCycle: candidate,
     recentLoad: candidate,
     reboundCooldown: candidate,
     gapHazard: candidate
@@ -53,6 +55,43 @@ test('the isolated four-No prior remains 25% before closed-day policy materializ
   assert.equal(forecast.percent, 25);
   assert.equal(forecast.probability, 0.25);
   assert.equal(forecast.stage, 'bayesian-baseline');
+  assert.equal(forecast.cycle.active, false);
+});
+
+test('a repeated nine-day crash cycle creates bounded recurring troughs', () => {
+  const state = createDefaultState();
+  const noDays = new Set(['2026-07-04', '2026-07-13', '2026-07-22', '2026-07-23']);
+  for (let dateKey = '2026-07-04'; dateKey <= '2026-07-23'; dateKey = addDays(dateKey, 1)) {
+    state.outcomes[dateKey] = {
+      played: !noDays.has(dateKey),
+      source: 'observed'
+    };
+  }
+
+  const cycle = detectCrashCycle(Object.entries(state.outcomes)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([dateKey, record]) => ({ dateKey, played: record.played, source: record.source })));
+  assert.equal(cycle.active, true);
+  assert.equal(cycle.period, 9);
+  assert.deepEqual(cycle.clusterStarts, ['2026-07-04', '2026-07-13', '2026-07-22']);
+
+  const outlook = buildRecursiveOutlook(state, '2026-07-23');
+  const byDay = new Map(outlook.points.map((point) => [point.targetDay, point.percent]));
+  for (const troughDay of ['2026-07-31', '2026-08-09', '2026-08-18']) {
+    assert.ok(byDay.get(troughDay) <= 50, `${troughDay} should be a visible trough`);
+  }
+  for (const normalDay of ['2026-07-30', '2026-08-02', '2026-08-11', '2026-08-20']) {
+    assert.ok(byDay.get(normalDay) >= 70, `${normalDay} should remain a likely play day`);
+  }
+  assert.ok(outlook.points.every((point) => point.percent >= 5 && point.percent <= 95));
+  assert.equal(computeForecast(state, '2026-07-31').stage, 'cycle-aware-bayesian-baseline');
+
+  const leaked = structuredClone(state);
+  leaked.outcomes['2026-07-31'] = { played: true, source: 'test-target' };
+  assert.equal(
+    computeForecast(leaked, '2026-07-31').percent,
+    computeForecast(state, '2026-07-31').percent
+  );
 });
 
 test('target and future outcomes cannot leak into their own forecast', () => {

@@ -33,6 +33,13 @@ full normalized expansion, preserving probability-distribution diversity while
 keeping runtime bounded. The method is versioned so an older cached outlook is
 recomputed without changing any official forecast.
 
+When the newest contiguous observed history contains at least three distinct No
+clusters with a stable 4–21 day interval, the model adds a Bayesian cycle signal.
+It learns play rates by cycle phase, shrinks them toward the overall rate, and
+caps pattern confidence so predicted crash days become visible troughs without
+ever becoming 0% or 100% forecasts. Simulated outlook paths cannot re-anchor the
+observed cycle, and target-day outcomes remain excluded from their own forecast.
+
 `PUT /api/outcomes/today` accepts only
 `{ "played": false, "expectedLeagueDay": "YYYY-MM-DD" }`. The day value is an
 equality precondition, never a writable target; a stale tab receives `409` and

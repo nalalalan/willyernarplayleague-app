@@ -43,7 +43,7 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   const response = await fetch(`${baseUrl}/`);
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /there is a 75% chance that yernar will play league today/);
+  assert.match(html, /there is a 85% chance that yernar will play league today/);
   assert.match(html, /data-played="false">yernar didn&#39;t play league</);
   assert.doesNotMatch(html, /data-played="true"/);
   assert.doesNotMatch(html, /change answer/);

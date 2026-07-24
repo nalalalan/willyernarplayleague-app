@@ -90,7 +90,7 @@ test('backup recovery is followed by canonical closed-day backfill', async (t) =
   assert.equal((await recovered.health()).recoveredFromBackup, true);
   assert.equal(state.history.length, 20);
   assert.equal(state.todayOutcome, null);
-  assert.equal(state.todayProbability, 75);
+  assert.equal(state.todayProbability, 85);
   assert.equal(Object.values(recovered.getSnapshot().outcomes).filter((record) => record.played).length, 16);
 });
 

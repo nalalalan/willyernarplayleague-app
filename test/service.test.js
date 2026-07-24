@@ -49,8 +49,8 @@ test('first request backfills every closed day as Yes except the four authoritat
   assert.equal(stored.outcomes['2026-07-21'].source, 'historical-default-yes');
   assert.equal(Object.hasOwn(stored.outcomes, '2026-07-24'), false);
   assert.equal(state.todayOutcome, null);
-  assert.equal(state.todayProbability, 75);
-  assert.equal(state.statement, 'there is a 75% chance that yernar will play league today');
+  assert.equal(state.todayProbability, 85);
+  assert.equal(state.statement, 'there is a 85% chance that yernar will play league today');
   assert.equal(state.canRecordDidNotPlay, true);
   assert.equal(state.actionLabel, "yernar didn't play league");
   assert.equal(state.chart.activeDay, '2026-07-24');
@@ -75,7 +75,7 @@ test('official forecast is created after closed-day backfill and remains frozen'
   const { store, service } = await serviceFixture(t);
   await service.getState();
   const official = structuredClone(store.getSnapshot().forecasts.official['2026-07-24']);
-  assert.equal(official.percent, 75);
+  assert.equal(official.percent, 85);
   assert.ok(Number.isFinite(official.unroundedProbability));
   await service.recordTodayNo('2026-07-24');
   assert.deepEqual(store.getSnapshot().forecasts.official['2026-07-24'], official);
@@ -185,7 +185,7 @@ test('concurrent duplicate No submissions produce one canonical change', async (
 test('concurrent first reads materialize backfill and official forecast only once', async (t) => {
   const { store, service } = await serviceFixture(t);
   const states = await Promise.all([service.getState(), service.getState(), service.getState()]);
-  assert.ok(states.every((state) => state.todayProbability === 75 && state.history.length === 20));
+  assert.ok(states.every((state) => state.todayProbability === 85 && state.history.length === 20));
   const stored = store.getSnapshot();
   assert.equal(Object.keys(stored.forecasts.official).filter((day) => day === '2026-07-24').length, 1);
   assert.equal(stored.outcomeChanges.filter((event) => event.source === 'historical-default-yes').length, 16);
