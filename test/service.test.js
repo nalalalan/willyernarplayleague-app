@@ -56,6 +56,13 @@ test('first request backfills every closed day as Yes except the four authoritat
   assert.equal(state.chart.activeDay, '2026-07-24');
   assert.equal(state.chart.windowStart, '2026-06-24');
   assert.equal(state.chart.windowEnd, '2026-08-23');
+  assert.equal(state.chart.past.length, 20);
+  assert.deepEqual(
+    state.chart.past.filter((point) => !point.played).map((point) => point.targetDay),
+    ['2026-07-04', '2026-07-13', '2026-07-22', '2026-07-23']
+  );
+  assert.equal(state.chart.past.filter((point) => point.played).length, 16);
+  assert.ok(state.chart.past.every((point) => point.probability === (point.played ? 1 : 0)));
   assert.equal(state.chart.outlook.length, OUTLOOK_HORIZON);
   assert.equal(state.chart.outlook[0].targetDay, '2026-07-25');
   assert.equal(state.chart.outlook.at(-1).targetDay, '2026-08-23');
@@ -88,6 +95,14 @@ test('public service accepts only the idempotent did-not-play exception', async 
   assert.equal(first.actionLabel, null);
   assert.equal(first.statement, `yernar does not play league today. there is a ${first.tomorrowProbability}% chance that he will play league tomorrow.`);
   assert.equal(first.tomorrowProbability, first.outlook.points[0].percent);
+  assert.equal(first.chart.past.length, 21);
+  assert.deepEqual(first.chart.past.at(-1), {
+    targetDay: '2026-07-24',
+    probability: 0,
+    percent: 0,
+    played: false,
+    kind: 'outcome'
+  });
   assert.deepEqual(second, first);
   const stored = store.getSnapshot();
   assert.equal(stored.outcomes['2026-07-24'].source, 'explicit-no');
@@ -175,14 +190,16 @@ test('concurrent first reads materialize backfill and official forecast only onc
   assert.equal(Object.keys(stored.forecasts.official).filter((day) => day === '2026-07-24').length, 1);
   assert.equal(stored.outcomeChanges.filter((event) => event.source === 'historical-default-yes').length, 16);
   assert.deepEqual(states[0].chart.issued.map((point) => point.targetDay), ['2026-07-24']);
+  assert.equal(states[0].chart.past.length, 20);
 });
 
-test('chart exposes a fixed 60-day domain and only real official forecasts within it', () => {
+test('chart exposes a fixed 60-day domain and every recorded outcome within it', () => {
   const state = createDefaultState();
   const activeDay = '2026-08-10';
   const template = computeForecast(state, addDays(activeDay, -34));
   for (let offset = -34; offset <= 0; offset += 1) {
     const targetDay = addDays(activeDay, offset);
+    state.outcomes[targetDay] = { played: offset % 5 !== 0, source: 'test' };
     state.forecasts.official[targetDay] = snapshotForecast(
       { ...template, targetDay },
       `${targetDay}T10:00:00.000Z`,
@@ -195,6 +212,10 @@ test('chart exposes a fixed 60-day domain and only real official forecasts withi
   assert.equal(publicState.chart.activeDay, activeDay);
   assert.equal(publicState.chart.windowStart, addDays(activeDay, -30));
   assert.equal(publicState.chart.windowEnd, addDays(activeDay, 30));
+  assert.equal(publicState.chart.past.length, 31);
+  assert.equal(publicState.chart.past[0].targetDay, addDays(activeDay, -30));
+  assert.equal(publicState.chart.past.at(-1).targetDay, activeDay);
+  assert.ok(publicState.chart.past.every((point) => point.percent === (point.played ? 100 : 0)));
   assert.equal(publicState.chart.issued.length, 31);
   assert.equal(publicState.chart.issued[0].targetDay, addDays(activeDay, -30));
   assert.equal(publicState.chart.issued.at(-1).targetDay, activeDay);

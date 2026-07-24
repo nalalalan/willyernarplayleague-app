@@ -9,17 +9,21 @@ function point(targetDay, percent, kind) {
   return { targetDay, percent, probability: percent / 100, kind };
 }
 
+function result(targetDay, played) {
+  return { targetDay, played, percent: played ? 100 : 0, probability: played ? 1 : 0, kind: 'outcome' };
+}
+
 test('chart uses one continuous 61-day calendar domain without inventing missing past points', () => {
   const activeDay = '2026-06-30';
   const windowStart = addDays(activeDay, -30);
   const windowEnd = addDays(activeDay, 30);
-  const issued = Array.from({ length: 31 }, (_, index) => (
-    point(addDays(windowStart, index), 55 + (index % 6), 'official')
+  const past = Array.from({ length: 31 }, (_, index) => (
+    result(addDays(windowStart, index), index % 6 !== 0)
   )).filter((item) => item.targetDay !== addDays(activeDay, -17));
   const outlook = Array.from({ length: 30 }, (_, index) => (
     point(addDays(activeDay, index + 1), 70 + (index % 5), 'outlook')
   ));
-  const chart = { activeDay, windowStart, windowEnd, issued, outlook };
+  const chart = { activeDay, windowStart, windowEnd, past, outlook };
 
   for (const layoutName of ['desktop', 'mobile']) {
     const geometry = chartGeometry(chart, layoutName);
@@ -53,6 +57,8 @@ test('chart uses one continuous 61-day calendar domain without inventing missing
   assert.equal((html.match(/>probability<\/text>/g) || []).length, 2);
   assert.doesNotMatch(html, />probability over time</);
   assert.ok(html.indexOf('>past</span>') < html.indexOf('>future</span>'));
+  assert.match(html, /6\/30\/26: yernar did not play league/);
+  assert.match(html, /Past results: 5\/31\/26 did not play/);
   assert.match(html, /7\/1\/26: 70% future/);
   assert.match(html, /7\/30\/26: 74% future/);
 });

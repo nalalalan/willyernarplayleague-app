@@ -21,11 +21,10 @@ The League day changes at 6:00 AM in `America/New_York`. Production stores its
 state on a single Railway volume mounted at `/data`.
 
 The public chart uses a fixed date domain from 30 days before the active League
-day through 30 days after it. Its past series contains only real immutable
-official forecasts within that past-30-calendar-day boundary; seeded and
-backfilled outcomes never receive invented historical forecasts. The future
-series contains exactly the next 30 daily forecasts, and its first point remains
-the probability used by the tomorrow sentence.
+day through 30 days after it. Its solid past series contains every recorded
+outcome in that window: played is plotted at 100% and did not play at 0%. The
+dashed future series contains exactly the next 30 daily probability forecasts,
+and its first point remains the probability used by the tomorrow sentence.
 
 Future probabilities are produced locally with deterministic recursive
 marginalization. Branches remain exact while their count is small. Above 32

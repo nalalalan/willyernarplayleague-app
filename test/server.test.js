@@ -49,7 +49,9 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.doesNotMatch(html, /change answer/);
   assert.doesNotMatch(html, />--</);
   assert.match(html, /<title id="chart-title">yernar league probability, past and future<\/title>/);
+  assert.match(html, /Past results: 7\/4\/26 did not play, 7\/5\/26 played/);
   assert.match(html, /Future: 7\/25\/26/);
+  assert.equal((html.match(/chart-point-past/g) || []).length, 40);
   assert.equal((html.match(/chart-point-future/g) || []).length, 60);
   assert.equal((html.match(/class="chart-date/g) || []).length, 14);
   assert.doesNotMatch(html, /class="chart-value"|>probability over time</);
@@ -63,18 +65,26 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.ok(html.indexOf('suite-app-mark') < html.indexOf('suite-app-name'));
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
   assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260723\.png"/);
-  assert.match(html, /href="\/styles\.css\?v=20260724-plot61"/);
-  assert.match(html, /src="\/app\.js\?v=20260724-plot61"/);
+  assert.match(html, /href="\/styles\.css\?v=20260724-past-results"/);
+  assert.match(html, /src="\/app\.js\?v=20260724-past-results"/);
   assert.match(html, /7\/23\/26: yernar did not play league/);
 });
 
-test('state API separates solid issued forecasts from the dashed provisional outlook', async (t) => {
+test('state API separates solid recorded outcomes from the dashed provisional outlook', async (t) => {
   const { baseUrl } = await serverFixture(t);
   const response = await fetch(`${baseUrl}/api/state`);
   assert.equal(response.status, 200);
   const state = await response.json();
   assert.equal(state.chart.issued.length, 1);
   assert.equal(state.chart.issued[0].kind, 'official');
+  assert.equal(state.chart.past.length, 20);
+  assert.ok(state.chart.past.every((point) => point.kind === 'outcome'));
+  assert.equal(state.chart.past[0].targetDay, '2026-07-04');
+  assert.equal(state.chart.past.at(-1).targetDay, '2026-07-23');
+  assert.deepEqual(
+    state.chart.past.filter((point) => !point.played).map((point) => point.targetDay),
+    ['2026-07-04', '2026-07-13', '2026-07-22', '2026-07-23']
+  );
   assert.equal(state.chart.outlook.length, 30);
   assert.ok(state.chart.outlook.every((point) => point.kind === 'outlook'));
   assert.equal(state.chart.outlook[0].targetDay, '2026-07-25');

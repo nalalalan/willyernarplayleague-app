@@ -48,12 +48,12 @@
 
   function chartGeometry(layoutName) {
     const layout = chartLayouts[layoutName];
-    const issued = [...(state.chart.issued || [])]
+    const recorded = [...(state.chart.past || [])]
       .sort((a, b) => a.targetDay.localeCompare(b.targetDay));
     const outlook = [...(state.chart.outlook || [])]
       .sort((a, b) => a.targetDay.localeCompare(b.targetDay));
     const activeDay = state.chart.activeDay
-      || issued.at(-1)?.targetDay
+      || recorded.at(-1)?.targetDay
       || (outlook[0] ? addDays(outlook[0].targetDay, -1) : null);
     const windowStart = state.chart.windowStart || (activeDay ? addDays(activeDay, -30) : null);
     const windowEnd = state.chart.windowEnd || (activeDay ? addDays(activeDay, 30) : null);
@@ -70,7 +70,7 @@
         x: pointX(item.targetDay),
         y: pointY(item)
       }));
-    const past = placeSeries(issued.filter((item) => (
+    const past = placeSeries(recorded.filter((item) => (
       item.targetDay >= windowStart && item.targetDay <= activeDay
     )));
     const future = placeSeries(outlook.filter((item) => (
@@ -112,10 +112,13 @@
     const title = svgElement('title', { id: `chart-title${suffix}` });
     title.textContent = 'yernar league probability, past and future';
     const description = svgElement('desc', { id: `chart-description${suffix}` });
-    const describe = (label, points) => points.length
-      ? `${label}: ${points.map((point) => `${displayDate(point.targetDay)} ${point.percent}%`).join(', ')}.`
-      : `${label}: no data.`;
-    description.textContent = `${describe('Past', past)} ${describe('Future', future)}`;
+    const pastDescription = past.length
+      ? `Past results: ${past.map((point) => `${displayDate(point.targetDay)} ${point.played ? 'played' : 'did not play'}`).join(', ')}.`
+      : 'Past results: no recorded days.';
+    const futureDescription = future.length
+      ? `Future: ${future.map((point) => `${displayDate(point.targetDay)} ${point.percent}%`).join(', ')}.`
+      : 'Future: no forecast.';
+    description.textContent = `${pastDescription} ${futureDescription}`;
     svg.append(title, description);
 
     for (const [y, label] of [[layout.top, '100%'], [layout.middle, '50%'], [layout.bottom, '0%']]) {
@@ -189,7 +192,9 @@
           r: layout.pointRadius
         });
         const pointTitle = svgElement('title');
-        pointTitle.textContent = `${displayDate(point.targetDay)}: ${point.percent}% ${kind}`;
+        pointTitle.textContent = kind === 'past'
+          ? `${displayDate(point.targetDay)}: yernar ${point.played ? 'played' : 'did not play'} league`
+          : `${displayDate(point.targetDay)}: ${point.percent}% future`;
         circle.append(pointTitle);
         svg.append(circle);
       }
