@@ -1,0 +1,8 @@
+node_modules/
+.env
+.data/
+coverage/
+*.log
+tmp-*
+_verification/
+.visual-qa-data/
