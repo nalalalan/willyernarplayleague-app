@@ -65,7 +65,7 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.ok(html.indexOf('suite-ao-home') < html.indexOf('suite-app-mark'));
   assert.ok(html.indexOf('suite-app-mark') < html.indexOf('suite-app-name'));
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
-  assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260724-v3\.png"/);
+  assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260724-v4\.png"/);
   assert.match(html, /href="\/chart\.css\?v=20260724-ticks-only-v1"/);
   assert.match(html, /href="\/styles\.css\?v=20260724-ticks-only-v1"/);
   assert.match(html, /src="\/chart\.js\?v=20260724-ticks-only-v1"/);
@@ -303,6 +303,8 @@ test('static identity routes work and unknown routes fail closed', async (t) => 
   assert.match(iconSvg, /id="anxious-brows"/);
   assert.match(iconSvg, /id="uncertain-mouth"/);
   assert.match(iconSvg, /id="anxiety-mark"/);
+  assert.match(iconSvg, /id="panic-lines"/);
+  assert.match(iconSvg, /id="panic-sweat"/);
   assert.match(iconSvg, /id="question-mark"/);
   assert.match(iconSvg, /id="leagueOrb"/);
   assert.match(iconSvg, /id="leagueGold"/);
