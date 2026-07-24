@@ -13,6 +13,7 @@ const {
   validateState
 } = require('./lib/state');
 const { renderPage } = require('./lib/view');
+const { renderChartCss } = require('./public/chart');
 
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '.data');
@@ -22,6 +23,7 @@ const MAX_BODY_BYTES = 1024;
 
 const STATIC_FILES = Object.freeze({
   '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
+  '/chart.js': ['chart.js', 'text/javascript; charset=utf-8'],
   '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
   '/icon.svg': ['icon.svg', 'image/svg+xml; charset=utf-8'],
   '/site.webmanifest': ['site.webmanifest', 'application/manifest+json; charset=utf-8']
@@ -173,6 +175,16 @@ function createRequestHandler({
     }
 
     try {
+      if ((request.method === 'GET' || request.method === 'HEAD') && url.pathname === '/chart.css') {
+        const body = Buffer.from(renderChartCss());
+        writeResponse(response, 200, {
+          'Content-Type': 'text/css; charset=utf-8',
+          'Cache-Control': 'public, max-age=300',
+          'Content-Length': String(body.length)
+        }, request.method === 'HEAD' ? '' : body);
+        return;
+      }
+
       if ((request.method === 'GET' || request.method === 'HEAD') && STATIC_FILES[url.pathname]) {
         const [filename, contentType] = STATIC_FILES[url.pathname];
         const body = await fs.readFile(path.join(publicDir, filename));

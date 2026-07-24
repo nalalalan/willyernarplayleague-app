@@ -65,8 +65,11 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.ok(html.indexOf('suite-app-mark') < html.indexOf('suite-app-name'));
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
   assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260723\.png"/);
-  assert.match(html, /href="\/styles\.css\?v=20260724-wide-copy"/);
-  assert.match(html, /src="\/app\.js\?v=20260724-past-results"/);
+  assert.match(html, /href="\/chart\.css\?v=20260724-editorial"/);
+  assert.match(html, /href="\/styles\.css\?v=20260724-editorial"/);
+  assert.match(html, /src="\/chart\.js\?v=20260724-editorial"/);
+  assert.match(html, /src="\/app\.js\?v=20260724-editorial"/);
+  assert.ok(html.indexOf('src="/chart.js') < html.indexOf('src="/app.js'));
   assert.match(html, /7\/23\/26: yernar did not play league/);
 });
 
@@ -218,6 +221,14 @@ test('static identity routes work and unknown routes fail closed', async (t) => 
   assert.match(icon.headers.get('content-type'), /image\/svg\+xml/);
   assert.match(await icon.text(), /aria-label="league"/);
   assert.equal((await fetch(`${baseUrl}/site.webmanifest`)).status, 200);
+  const chartScript = await fetch(`${baseUrl}/chart.js`);
+  assert.equal(chartScript.status, 200);
+  assert.match(chartScript.headers.get('content-type'), /text\/javascript/);
+  assert.match(await chartScript.text(), /YernarLeagueChart/);
+  const chartStyles = await fetch(`${baseUrl}/chart.css`);
+  assert.equal(chartStyles.status, 200);
+  assert.match(chartStyles.headers.get('content-type'), /text\/css/);
+  assert.match(await chartStyles.text(), /--chart-line-width: 3px/);
   assert.equal((await fetch(`${baseUrl}/missing`)).status, 404);
   assert.equal((await fetch(`${baseUrl}/api/missing`)).status, 404);
 });

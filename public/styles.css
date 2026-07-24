@@ -104,7 +104,7 @@ button {
 }
 
 main {
-  width: min(1180px, calc(100% - 48px));
+  width: min(1360px, calc(100% - 48px));
   margin: 0 auto;
   padding: clamp(28px, 4vw, 46px) 0 56px;
 }
@@ -112,10 +112,9 @@ main {
 .forecast-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
-  align-items: center;
-  gap: clamp(28px, 3vw, 44px);
-  padding-bottom: clamp(30px, 4vw, 46px);
-  border-bottom: 1px solid var(--line);
+  align-items: start;
+  gap: clamp(20px, 2vw, 24px);
+  padding-bottom: clamp(24px, 3vw, 36px);
 }
 
 .forecast-layout > * {
@@ -124,6 +123,7 @@ main {
 
 .probability-chart {
   min-width: 0;
+  position: relative;
 }
 
 .history h2 {
@@ -136,12 +136,17 @@ main {
 }
 
 .chart-legend {
+  position: absolute;
+  z-index: 1;
+  top: 3px;
+  right: 2px;
   display: flex;
   width: max-content;
-  margin: 0 0 4px auto;
+  padding: 3px 2px 4px 13px;
   flex-direction: column;
   gap: 6px;
-  color: var(--muted);
+  background: linear-gradient(90deg, rgba(245, 239, 230, 0), rgba(245, 239, 230, .92) 18%);
+  color: var(--chart-muted);
   font-size: 12px;
   line-height: 1.2;
 }
@@ -156,11 +161,11 @@ main {
 .legend-line {
   display: inline-block;
   width: 20px;
-  border-top: 2px solid var(--accent-dark);
+  border-top: 2px solid var(--chart-past);
 }
 
 .legend-future {
-  border-top-color: var(--gold);
+  border-top-color: var(--chart-future);
   border-top-style: dashed;
 }
 
@@ -176,7 +181,7 @@ main {
 }
 
 .chart-grid {
-  stroke: rgba(64, 54, 48, .11);
+  stroke: var(--chart-grid);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
@@ -184,14 +189,14 @@ main {
 .chart-axis-label,
 .chart-date,
 .chart-y-label {
-  fill: var(--muted);
+  fill: var(--chart-muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
 .chart-y-label {
-  font-size: 12px;
-  font-weight: 720;
+  font-size: 12.5px;
+  font-weight: 760;
   letter-spacing: .02em;
 }
 
@@ -201,32 +206,32 @@ main {
 }
 
 .chart-x-tick {
-  stroke: rgba(64, 54, 48, .32);
+  stroke: var(--chart-boundary);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 
 .chart-active-boundary {
-  stroke: rgba(64, 54, 48, .24);
+  stroke: var(--chart-boundary);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 
 .chart-line {
   fill: none;
-  stroke-width: 2.5;
+  stroke-width: var(--chart-line-width);
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
 
 .chart-line-past {
-  stroke: var(--accent-dark);
+  stroke: var(--chart-past);
 }
 
 .chart-line-future {
-  stroke: var(--gold);
-  stroke-dasharray: 7 7;
+  stroke: var(--chart-future);
+  stroke-dasharray: var(--chart-future-dash);
 }
 
 .chart-point {
@@ -235,14 +240,14 @@ main {
 
 .chart-point-past {
   fill: var(--surface);
-  stroke: var(--accent-dark);
-  stroke-width: 1.6;
+  stroke: var(--chart-past);
+  stroke-width: var(--chart-past-point-width);
 }
 
 .chart-point-future {
   fill: var(--background);
-  stroke: var(--gold);
-  stroke-width: 1.5;
+  stroke: var(--chart-future);
+  stroke-width: var(--chart-future-point-width);
 }
 
 .prediction {
@@ -250,14 +255,13 @@ main {
 }
 
 .prediction-statement {
-  max-width: 660px;
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(34px, 4.2vw, 54px);
+  font-size: clamp(38px, 3vw, 46px);
   font-weight: 400;
   letter-spacing: -.025em;
-  line-height: 1.11;
-  text-wrap: balance;
+  line-height: 1.06;
+  text-wrap: pretty;
 }
 
 .answer-area {
@@ -345,7 +349,7 @@ main {
   border: 0;
 }
 
-@media (max-width: 1040px) {
+@media (max-width: 999px) {
   main {
     width: min(760px, calc(100% - 36px));
   }
@@ -356,9 +360,6 @@ main {
     gap: 28px;
   }
 
-  .prediction-statement {
-    max-width: 680px;
-  }
 }
 
 @media (max-width: 640px) {

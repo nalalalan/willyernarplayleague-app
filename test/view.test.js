@@ -2,8 +2,12 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
 const { addDays } = require('../lib/time');
 const { chartGeometry, renderChart, renderPrediction } = require('../lib/view');
+const chartModule = require('../public/chart');
 
 function point(targetDay, percent, kind) {
   return { targetDay, percent, probability: percent / 100, kind };
@@ -61,6 +65,55 @@ test('chart uses one continuous 61-day calendar domain without inventing missing
   assert.match(html, /Past results: 5\/31\/26 did not play/);
   assert.match(html, /7\/1\/26: 70% future/);
   assert.match(html, /7\/30\/26: 74% future/);
+});
+
+test('server and browser use one chart renderer and one editorial layout contract', () => {
+  const activeDay = '2026-07-24';
+  const chart = {
+    activeDay,
+    windowStart: addDays(activeDay, -30),
+    windowEnd: addDays(activeDay, 30),
+    past: [result('2026-07-22', false), result('2026-07-23', false)],
+    outlook: [point('2026-07-25', 85, 'outlook'), point('2026-07-26', 84, 'outlook')]
+  };
+  const chartSourcePath = path.join(__dirname, '..', 'public', 'chart.js');
+  const appSourcePath = path.join(__dirname, '..', 'public', 'app.js');
+  const cssPath = path.join(__dirname, '..', 'public', 'styles.css');
+  const browserContext = {};
+  vm.runInNewContext(fs.readFileSync(chartSourcePath, 'utf8'), browserContext);
+
+  assert.strictEqual(renderChart, chartModule.renderChart);
+  assert.equal(browserContext.YernarLeagueChart.renderChart(chart), renderChart(chart));
+  assert.deepEqual(chartModule.CHART_CONFIG.layouts.desktop, {
+    width: 680,
+    height: 230,
+    left: 56,
+    right: 612,
+    top: 14,
+    middle: 98,
+    bottom: 182,
+    axisX: 47,
+    labelY: 214,
+    yLabelX: 14,
+    yLabelY: 98,
+    pointRadius: 2.5
+  });
+
+  const appSource = fs.readFileSync(appSourcePath, 'utf8');
+  assert.match(appSource, /chartRenderer\.renderChart\(state\.chart\)/);
+  assert.doesNotMatch(appSource, /chartLayouts|chartGeometry|createChartSvg|svgElement/);
+
+  const css = fs.readFileSync(cssPath, 'utf8');
+  assert.match(css, /width: min\(1360px, calc\(100% - 48px\)\)/);
+  assert.match(css, /gap: clamp\(20px, 2vw, 24px\)/);
+  assert.match(css, /font-size: clamp\(38px, 3vw, 46px\)/);
+  assert.match(css, /line-height: 1\.06/);
+  assert.match(css, /text-wrap: pretty/);
+  assert.match(css, /@media \(max-width: 999px\)/);
+  assert.doesNotMatch(css, /max-width: 660px/);
+  assert.doesNotMatch(css.match(/\.forecast-layout \{([\s\S]*?)\n\}/)[1], /border-bottom/);
+  assert.match(css, /\.chart-legend \{[\s\S]*position: absolute/);
+  assert.match(css, /stroke-width: var\(--chart-line-width\)/);
 });
 
 test('prediction renders only the single did-not-play exception action while today is open', () => {
