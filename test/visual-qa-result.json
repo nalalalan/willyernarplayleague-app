@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "artifact": "integrated-text-chart-composition",
-  "implementation_commit": "6a00bd021ca180803b74a41ef6afaceab7cf1efe",
+  "implementation_commit": "12d8b6afc10a373495a5243a463d98f1180ffdf4",
   "source_sha256": {
     "public/chart.js": "075C35034F47BEC836493B24DC8CDEE489F14B9A7BEA882007F683DAD7DB0B32",
     "public/styles.css": "CE80C1401C81A2A1B1607C2FEBF176C0E263ACB8AF4FD08B02A6D3941A41AAFB",
-    "lib/view.js": "CC9ABD6ECE5B88C599129403F45B8C27AEF518F56E5A8C1B15280AAD474132A6",
-    "public/app.js": "67DD9D91313B1E27284B049BAF3E02A57937442CD73DBAC205A7DD44D69C8A04"
+    "lib/view.js": "DD604A078D4E9A74D2D3956D70F30F8DB5976DF02ACC5D0C415CF5A6488C2C1A",
+    "public/app.js": "97A5CE1874915D8D335F464714547279438DB0DF4CD1AEBB835EEE0453A4B683"
   },
   "renderer_parity": {
     "ssr_browser_markup_equal": true,
@@ -24,6 +24,15 @@
     "production_history_mutated": false,
     "verified_viewports": [1440, 1280, 1024, 999, 375],
     "mobile_touch_target_px": 44,
+    "overflow": false
+  },
+  "primary_action": {
+    "label": "no league",
+    "ssr_matches_client": true,
+    "desktop_visible": true,
+    "mobile_visible": true,
+    "mobile_height_px": 48,
+    "click_records_no_in_disposable_state": true,
     "overflow": false
   },
   "series": {
