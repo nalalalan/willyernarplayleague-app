@@ -69,7 +69,7 @@ test('chart uses one continuous 61-day calendar domain without inventing missing
   assert.equal((html.match(/class="chart-date/g) || []).length, 12);
   assert.match(html, /<path class="chart-line chart-line-past chart-step" d="M /);
   assert.doesNotMatch(html, /<polyline class="chart-line chart-line-past"/);
-  assert.equal((html.match(/>probability<\/text>/g) || []).length, 2);
+  assert.doesNotMatch(html, />probability<\/text>|chart-y-label/);
   assert.doesNotMatch(html, />probability over time</);
   assert.ok(html.indexOf('>past</span>') < html.indexOf('>future</span>'));
   assert.match(html, /6\/30\/26: yernar did not play league/);
@@ -118,17 +118,16 @@ test('server and browser use one chart renderer and one editorial layout contrac
   assert.deepEqual(chartModule.CHART_CONFIG.layouts.desktop, {
     width: 680,
     height: 246,
-    left: 60,
+    left: 52,
     right: 646,
     top: 18,
     middle: 100,
     bottom: 182,
-    axisX: 50,
+    axisX: 44,
     labelY: 228,
-    yLabelX: 17,
-    yLabelY: 100,
     pointRadius: 3.2
   });
+  assert.doesNotMatch(renderChart(chart), /chart-y-label|>probability<\/text>/);
 
   const appSource = fs.readFileSync(appSourcePath, 'utf8');
   assert.match(appSource, /chartRenderer\.renderChart\(state\.chart\)/);
@@ -147,7 +146,7 @@ test('server and browser use one chart renderer and one editorial layout contrac
   assert.match(css, /\.chart-legend \{[\s\S]*position: absolute/);
   assert.match(css, /font-size: 14\.5px/);
   assert.match(css, /\.chart-axis-label,[\s\S]*font-size: 17px/);
-  assert.match(css, /\.chart-y-label \{[\s\S]*font-size: 18\.5px/);
+  assert.doesNotMatch(css, /chart-y-label/);
   assert.match(css, /stroke-width: var\(--chart-line-width\)/);
 });
 
@@ -170,6 +169,7 @@ test('tracked visual QA evidence remains bound to the integrated composition sou
   assert.deepEqual(result.viewports.map((viewport) => viewport.width), [1440, 1280, 1024, 999, 375]);
   assert.ok(result.viewports.every((viewport) => viewport.overflow === false));
   assert.ok(result.viewports.every((viewport) => viewport.legend_inside_plot === true));
+  assert.ok(result.viewports.every((viewport) => viewport.y_axis_label_present === false));
   assert.ok(result.viewports.every((viewport) => viewport.console_errors === 0));
   assert.ok(result.viewports.every((viewport) => viewport.past_points === 20));
   assert.ok(result.viewports.every((viewport) => viewport.future_points === 30));
@@ -186,10 +186,8 @@ test('tracked visual QA evidence remains bound to the integrated composition sou
   assert.ok(desktop.column_gap_px <= result.acceptance.maximum_column_gap_px);
   assert.ok(Math.abs(desktop.plot_top_delta_px) <= result.acceptance.maximum_absolute_plot_top_delta_px);
   assert.ok(desktop.rendered_tick_font_px >= result.acceptance.minimum_rendered_tick_font_px);
-  assert.ok(desktop.rendered_y_label_font_px >= result.acceptance.minimum_rendered_y_label_font_px);
   assert.ok(desktop.rendered_legend_font_px >= result.acceptance.minimum_rendered_legend_font_px);
   assert.ok(desktop.tick_glyph_bbox_height_px >= result.acceptance.minimum_tick_glyph_bbox_height_px);
-  assert.ok(desktop.y_label_glyph_bbox_height_px >= result.acceptance.minimum_y_label_glyph_bbox_height_px);
   assert.ok(desktop.inner_plot_height_px >= result.acceptance.minimum_inner_plot_height_px);
   assert.ok(desktop.inner_plot_height_px <= result.acceptance.maximum_inner_plot_height_px);
   assert.ok(desktop.plot_width_ratio >= result.acceptance.minimum_plot_width_ratio);

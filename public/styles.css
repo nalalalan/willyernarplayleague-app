@@ -193,19 +193,12 @@ main {
 }
 
 .chart-axis-label,
-.chart-date,
-.chart-y-label {
+.chart-date {
   fill: var(--chart-muted);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 17px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-}
-
-.chart-y-label {
-  font-size: 18.5px;
-  font-weight: 600;
-  letter-spacing: .02em;
 }
 
 .chart-date-active {
@@ -448,10 +441,6 @@ main {
   .chart-svg-desktop .chart-date {
     font-size: 21px;
   }
-
-  .chart-svg-desktop .chart-y-label {
-    font-size: 23px;
-  }
 }
 
 @media (max-width: 999px) {
@@ -529,13 +518,8 @@ main {
   }
 
   .chart-svg-mobile .chart-axis-label,
-  .chart-svg-mobile .chart-date,
-  .chart-svg-mobile .chart-y-label {
+  .chart-svg-mobile .chart-date {
     font-size: 15.5px;
-  }
-
-  .chart-svg-mobile .chart-y-label {
-    font-size: 16.5px;
   }
 
   .probability-chart {

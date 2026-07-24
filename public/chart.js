@@ -17,29 +17,25 @@
       desktop: freeze({
         width: 680,
         height: 246,
-        left: 60,
+        left: 52,
         right: 646,
         top: 18,
         middle: 100,
         bottom: 182,
-        axisX: 50,
+        axisX: 44,
         labelY: 228,
-        yLabelX: 17,
-        yLabelY: 100,
         pointRadius: 3.2
       }),
       mobile: freeze({
         width: 360,
         height: 246,
-        left: 54,
+        left: 48,
         right: 346,
         top: 46,
         middle: 118,
         bottom: 190,
-        axisX: 45,
+        axisX: 40,
         labelY: 228,
-        yLabelX: 16,
-        yLabelY: 118,
         pointRadius: 2.2
       })
     }),
@@ -218,7 +214,6 @@
       <line class="chart-grid" x1="${layout.left}" y1="${layout.middle}" x2="${layout.right}" y2="${layout.middle}"/>
       <line class="chart-grid" x1="${layout.left}" y1="${layout.bottom}" x2="${layout.right}" y2="${layout.bottom}"/>
       <line class="chart-active-boundary" x1="${geometry.activeX.toFixed(2)}" y1="${layout.top}" x2="${geometry.activeX.toFixed(2)}" y2="${layout.bottom}"/>
-      <text class="chart-y-label" x="${layout.yLabelX}" y="${layout.yLabelY}" text-anchor="middle" transform="rotate(-90 ${layout.yLabelX} ${layout.yLabelY})">probability</text>
       <text class="chart-axis-label" x="${layout.axisX}" y="${layout.top + 4}" text-anchor="end">100%</text>
       <text class="chart-axis-label" x="${layout.axisX}" y="${layout.middle + 4}" text-anchor="end">50%</text>
       <text class="chart-axis-label" x="${layout.axisX}" y="${layout.bottom + 4}" text-anchor="end">0%</text>
