@@ -205,9 +205,9 @@ test('prediction renders only the single did-not-play exception action while tod
   const html = renderPrediction({
     statement: 'there is a 75% chance that yernar will play league today',
     canRecordDidNotPlay: true,
-    actionLabel: "yernar didn't play league"
+    actionLabel: 'no league'
   });
-  assert.match(html, /data-played="false">yernar didn&#39;t play league<\/button>/);
+  assert.match(html, /data-played="false">no league<\/button>/);
   assert.doesNotMatch(html, /data-played="true"/);
   assert.doesNotMatch(html, /change answer|>yes<|>no</);
 });

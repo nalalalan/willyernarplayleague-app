@@ -44,7 +44,7 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /there is a 85% chance that yernar will play league today/);
-  assert.match(html, /data-played="false">yernar didn&#39;t play league</);
+  assert.match(html, /data-played="false">no league</);
   assert.doesNotMatch(html, /data-played="true"/);
   assert.doesNotMatch(html, /change answer/);
   assert.doesNotMatch(html, />--</);
@@ -66,10 +66,10 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.ok(html.indexOf('suite-app-mark') < html.indexOf('suite-app-name'));
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
   assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260723\.png"/);
-  assert.match(html, /href="\/chart\.css\?v=20260724-history-delete-v1"/);
-  assert.match(html, /href="\/styles\.css\?v=20260724-history-delete-v1"/);
-  assert.match(html, /src="\/chart\.js\?v=20260724-history-delete-v1"/);
-  assert.match(html, /src="\/app\.js\?v=20260724-history-delete-v1"/);
+  assert.match(html, /href="\/chart\.css\?v=20260724-no-league-v1"/);
+  assert.match(html, /href="\/styles\.css\?v=20260724-no-league-v1"/);
+  assert.match(html, /src="\/chart\.js\?v=20260724-no-league-v1"/);
+  assert.match(html, /src="\/app\.js\?v=20260724-no-league-v1"/);
   assert.ok(html.indexOf('src="/chart.js') < html.indexOf('src="/app.js'));
   assert.match(html, /7\/23\/26: yernar did not play league/);
   assert.match(html, /data-history-toggle[^>]*>edit<\/button>/);

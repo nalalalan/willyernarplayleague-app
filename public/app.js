@@ -25,7 +25,7 @@
     button.className = 'answer-button answer-exception';
     button.type = 'button';
     button.dataset.played = 'false';
-    button.textContent = state.actionLabel || "yernar didn't play league";
+    button.textContent = state.actionLabel || 'no league';
     button.disabled = mutating;
     buttons.append(button);
     return buttons;

@@ -52,7 +52,7 @@ test('first request backfills every closed day as Yes except the four authoritat
   assert.equal(state.todayProbability, 85);
   assert.equal(state.statement, 'there is a 85% chance that yernar will play league today');
   assert.equal(state.canRecordDidNotPlay, true);
-  assert.equal(state.actionLabel, "yernar didn't play league");
+  assert.equal(state.actionLabel, 'no league');
   assert.equal(state.chart.activeDay, '2026-07-24');
   assert.equal(state.chart.windowStart, '2026-06-24');
   assert.equal(state.chart.windowEnd, '2026-08-23');
