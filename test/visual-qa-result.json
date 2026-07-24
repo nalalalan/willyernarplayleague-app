@@ -1,25 +1,27 @@
 {
   "schema_version": 2,
   "artifact": "integrated-text-chart-composition",
-  "implementation_commit": "da87cffedc328dc9ff73f90d705dbabe12c98633",
+  "implementation_commit": "59deefb978549cab5db40cadfef6ebb104c6e0b3",
   "source_sha256": {
     "public/chart.js": "1941C26E05F0B0B9E6FB72A7CDDA96DD27C9247317A2D4B8FE9C4AA6EA53602C",
     "public/styles.css": "FCCA04F26BE983A9BFC0689411DBDEB259A4DB15FADB6A1A32CC82F9081960A2",
-    "lib/view.js": "08CED21BFC5D704D07EB951C5FD005C521F6E6327F0DD9EBDB39648B72EDE6DE",
+    "lib/view.js": "DA3184D80EE4F1397E851BEDC1A36739F855164E1A35D683C2840FA56922C7E6",
     "public/app.js": "97A5CE1874915D8D335F464714547279438DB0DF4CD1AEBB835EEE0453A4B683",
-    "public/icon.svg": "A8D2BCA61120B73E1278AA352A196EE524B6459527A775E3F12CE029AC3A5BBB",
-    "public/site.webmanifest": "4CCE74594AA26BAE2119975D0D48C552AECCA710FCF9793F9756E29BF4099843"
+    "public/icon.svg": "60401A8F1CBF56AE779EF105D4CFA7243090CB304E62D2981B37F4C519D3D292",
+    "public/site.webmanifest": "27101E0F77C1857F93DF61DB2B478B4886FD6105AA9CB776F26727A461DC6FD8"
   },
   "identity": {
     "concept": "yernar considering league",
-    "portrait_cues": ["Norwood 3 temple recession", "rectangular glasses", "narrow almond-shaped eyes"],
-    "question_cue": "league emblem thought bubble",
+    "portrait_cues": ["deep Norwood 3 temple recession", "dominant tall forehead", "narrow almond-shaped eyes", "flat cheek taper", "short small chin"],
+    "question_cue": "league emblem thought bubble with visible question mark",
+    "glasses_present": false,
+    "expression_cues": ["uneven worried brows", "off-center pupils", "wavy uncertain mouth", "anxiety sweat mark"],
     "transparent_canvas": true,
     "full_tile_background": false,
     "circular_footprint": true,
     "shoulders_and_chest_present": false,
-    "face_shape": "wide upper forehead tapering to a small chin",
-    "app_and_hub_svg_sha256": "A8D2BCA61120B73E1278AA352A196EE524B6459527A775E3F12CE029AC3A5BBB",
+    "face_shape": "dominant tall forehead with flat cheeks tapering to a short small chin",
+    "app_and_hub_svg_sha256": "60401A8F1CBF56AE779EF105D4CFA7243090CB304E62D2981B37F4C519D3D292",
     "verified_scales_px": [214, 72, 32]
   },
   "renderer_parity": {
