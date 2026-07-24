@@ -43,7 +43,7 @@ function scoreRow(index, overrides = {}) {
   };
 }
 
-test('four authoritative No outcomes produce the required 25% baseline', () => {
+test('the isolated four-No prior remains 25% before closed-day policy materialization', () => {
   const forecast = computeForecast(createDefaultState(), '2026-07-24');
   assert.equal(forecast.percent, 25);
   assert.equal(forecast.probability, 0.25);

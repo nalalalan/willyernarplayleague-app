@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { addDays } = require('../lib/time');
-const { chartGeometry } = require('../lib/view');
+const { chartGeometry, renderPrediction } = require('../lib/view');
 
 function point(targetDay, percent, kind) {
   return { targetDay, percent, probability: percent / 100, kind };
@@ -27,7 +27,31 @@ test('responsive chart windows issued history and reserves readable space for ev
     const spacings = geometry.outlook.slice(1).map((item, index) => (
       item.x - geometry.outlook[index].x
     ));
-    assert.ok(Math.min(...spacings) >= (layoutName === 'mobile' ? 26 : 40));
+    assert.ok(Math.min(...spacings) >= (layoutName === 'mobile' ? 36 : 40));
     assert.ok(geometry.issued.at(-1).x < geometry.outlook[0].x);
+    if (layoutName === 'mobile') {
+      assert.ok(geometry.outlook[0].x >= 120);
+      assert.ok(geometry.layout.width - geometry.outlook.at(-1).x >= 16);
+    }
   }
+});
+
+test('prediction renders only the single did-not-play exception action while today is open', () => {
+  const html = renderPrediction({
+    statement: 'there is a 75% chance that yernar will play league today',
+    canRecordDidNotPlay: true,
+    actionLabel: "yernar didn't play league"
+  });
+  assert.match(html, /data-played="false">yernar didn&#39;t play league<\/button>/);
+  assert.doesNotMatch(html, /data-played="true"/);
+  assert.doesNotMatch(html, /change answer|>yes<|>no</);
+});
+
+test('prediction renders no correction control after the No exception is recorded', () => {
+  const html = renderPrediction({
+    statement: 'yernar does not play league today. there is a 72% chance that he will play league tomorrow.',
+    canRecordDidNotPlay: false,
+    actionLabel: null
+  });
+  assert.doesNotMatch(html, /data-played|change answer/);
 });

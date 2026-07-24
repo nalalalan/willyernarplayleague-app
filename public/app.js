@@ -3,7 +3,6 @@
 
   const initial = document.getElementById('initial-state');
   let state = JSON.parse(initial.textContent);
-  let editing = false;
   let saving = false;
 
   const chartRoot = document.querySelector('[data-chart-root]');
@@ -16,8 +15,8 @@
       outlookLeft: 400, top: 22, middle: 99, bottom: 176, axisX: 47, labelY: 204
     },
     mobile: {
-      width: 360, height: 170, left: 42, right: 350, historyRight: 175,
-      outlookLeft: 190, top: 10, middle: 66, bottom: 122, axisX: 34, labelY: 160
+      width: 360, height: 170, left: 42, right: 344, historyRight: 110,
+      outlookLeft: 122, top: 10, middle: 66, bottom: 122, axisX: 34, labelY: 160
     }
   };
 
@@ -169,24 +168,17 @@
     chartRoot.append(section);
   }
 
-  function questionControls() {
-    const fragment = document.createDocumentFragment();
-    const question = document.createElement('p');
-    question.className = 'question';
-    question.textContent = 'did yernar play league?';
+  function exceptionControl() {
     const buttons = document.createElement('div');
     buttons.className = 'answer-buttons';
-    for (const [label, played, className] of [['yes', true, 'answer-yes'], ['no', false, 'answer-no']]) {
-      const button = document.createElement('button');
-      button.className = `answer-button ${className}`;
-      button.type = 'button';
-      button.dataset.played = String(played);
-      button.textContent = label;
-      button.disabled = saving;
-      buttons.append(button);
-    }
-    fragment.append(question, buttons);
-    return fragment;
+    const button = document.createElement('button');
+    button.className = 'answer-button answer-exception';
+    button.type = 'button';
+    button.dataset.played = 'false';
+    button.textContent = state.actionLabel || "yernar didn't play league";
+    button.disabled = saving;
+    buttons.append(button);
+    return buttons;
   }
 
   function renderPrediction(statusText = '', isError = false) {
@@ -199,26 +191,21 @@
     statement.className = 'prediction-statement';
     statement.dataset.statement = '';
     statement.textContent = state.statement;
-    const answerArea = document.createElement('div');
-    answerArea.className = 'answer-area';
-    answerArea.dataset.answerArea = '';
-    if (state.todayOutcome === null || editing) {
-      answerArea.append(questionControls());
-    } else {
-      const change = document.createElement('button');
-      change.className = 'change-answer';
-      change.type = 'button';
-      change.dataset.change = '';
-      change.textContent = 'change answer';
-      answerArea.append(change);
-    }
     const status = document.createElement('p');
     status.className = 'save-status';
     status.dataset.status = '';
     status.setAttribute('role', 'status');
     status.textContent = statusText;
     if (!isError) status.style.color = 'var(--muted)';
-    section.append(statement, answerArea, status);
+    section.append(statement);
+    if (state.canRecordDidNotPlay) {
+      const answerArea = document.createElement('div');
+      answerArea.className = 'answer-area';
+      answerArea.dataset.answerArea = '';
+      answerArea.append(exceptionControl());
+      section.append(answerArea);
+    }
+    section.append(status);
     predictionRoot.append(section);
   }
 
@@ -241,7 +228,7 @@
     historyRoot.append(section);
   }
 
-  async function saveOutcome(played) {
+  async function saveOutcome() {
     if (saving) return;
     saving = true;
     renderPrediction('saving...');
@@ -249,11 +236,19 @@
       const response = await fetch('/api/outcomes/today', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ played })
+        body: JSON.stringify({ played: false, expectedLeagueDay: state.activeLeagueDay })
       });
+      const payload = await response.json();
+      if (response.status === 409 && payload.state) {
+        state = payload.state;
+        saving = false;
+        renderChart();
+        renderPrediction('day changed. try again.');
+        renderHistory();
+        return;
+      }
       if (!response.ok) throw new Error('save failed');
-      state = await response.json();
-      editing = false;
+      state = payload;
       saving = false;
       renderChart();
       renderPrediction();
@@ -265,15 +260,28 @@
   }
 
   predictionRoot.addEventListener('click', (event) => {
-    const change = event.target.closest('[data-change]');
-    if (change) {
-      editing = true;
-      renderPrediction();
-      const firstButton = predictionRoot.querySelector('[data-played]');
-      firstButton?.focus();
-      return;
-    }
     const answer = event.target.closest('[data-played]');
-    if (answer) saveOutcome(answer.dataset.played === 'true');
+    if (answer?.dataset.played === 'false') saveOutcome();
+  });
+
+  async function refreshState() {
+    if (saving || document.visibilityState === 'hidden') return;
+    try {
+      const response = await fetch('/api/state', { headers: { Accept: 'application/json' } });
+      if (!response.ok) return;
+      const freshState = await response.json();
+      if (JSON.stringify(freshState) === JSON.stringify(state)) return;
+      state = freshState;
+      renderChart();
+      renderPrediction();
+      renderHistory();
+    } catch {
+      // The current server-rendered state remains usable while a refresh is unavailable.
+    }
+  }
+
+  setInterval(refreshState, 60_000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshState();
   });
 })();

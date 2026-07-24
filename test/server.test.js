@@ -22,7 +22,7 @@ async function serverFixture(t, options = {}) {
   await store.initialize({ createDefault: createDefaultState, migrate: migrateState, validate: validateState });
   const service = options.service || new LeagueService({
     store,
-    clock: () => new Date(options.instant || '2026-07-24T16:00:00.000Z')
+    clock: options.clock || (() => new Date(options.instant || '2026-07-24T16:00:00.000Z'))
   });
   const handler = createRequestHandler({
     service,
@@ -43,10 +43,10 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   const response = await fetch(`${baseUrl}/`);
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /there is a 25% chance that yernar will play league today/);
-  assert.match(html, /did yernar play league\?/);
-  assert.match(html, /data-played="true">yes</);
-  assert.match(html, /data-played="false">no</);
+  assert.match(html, /there is a 75% chance that yernar will play league today/);
+  assert.match(html, /data-played="false">yernar didn&#39;t play league</);
+  assert.doesNotMatch(html, /data-played="true"/);
+  assert.doesNotMatch(html, /change answer/);
   assert.doesNotMatch(html, />--</);
   assert.match(html, /<title id="chart-title">league probability over time<\/title>/);
   assert.match(html, /Seven-day outlook: 7\/25\/26/);
@@ -60,6 +60,8 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.ok(html.indexOf('suite-app-mark') < html.indexOf('suite-app-name'));
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
   assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260723\.png"/);
+  assert.match(html, /href="\/styles\.css\?v=20260724"/);
+  assert.match(html, /src="\/app\.js\?v=20260724"/);
   assert.match(html, /7\/23\/26: yernar did not play league/);
 });
 
@@ -81,15 +83,35 @@ test('valid same-origin JSON PUT saves and returns complete updated state', asyn
   const response = await fetch(`${baseUrl}/api/outcomes/today`, {
     method: 'PUT',
     headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ played: true })
+    body: JSON.stringify({ played: false, expectedLeagueDay: '2026-07-24' })
   });
   assert.equal(response.status, 200);
   assert.equal(response.headers.has('access-control-allow-origin'), false);
   const state = await response.json();
-  assert.equal(state.todayOutcome, true);
-  assert.match(state.statement, /^yernar plays league today\. there is a \d+% chance that he will play league tomorrow\.$/);
+  assert.equal(state.todayOutcome, false);
+  assert.match(state.statement, /^yernar does not play league today\. there is a \d+% chance that he will play league tomorrow\.$/);
   assert.equal(state.tomorrowProbability, state.chart.outlook[0].percent);
-  assert.equal(state.history[0].text, '7/24/26: yernar played league');
+  assert.equal(state.history[0].text, '7/24/26: yernar did not play league');
+});
+
+test('stale pre-cutoff tab receives fresh state without recording No on the new day', async (t) => {
+  let instant = new Date('2026-07-25T09:59:59.999Z');
+  const { baseUrl, store } = await serverFixture(t, { clock: () => new Date(instant) });
+  const before = await (await fetch(`${baseUrl}/api/state`)).json();
+  assert.equal(before.activeLeagueDay, '2026-07-24');
+  instant = new Date('2026-07-25T10:00:00.000Z');
+  const response = await fetch(`${baseUrl}/api/outcomes/today`, {
+    method: 'PUT',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ played: false, expectedLeagueDay: '2026-07-24' })
+  });
+  assert.equal(response.status, 409);
+  const payload = await response.json();
+  assert.equal(payload.state.activeLeagueDay, '2026-07-25');
+  assert.equal(payload.state.todayOutcome, null);
+  const stored = store.getSnapshot();
+  assert.equal(stored.outcomes['2026-07-24'].played, true);
+  assert.equal(Object.hasOwn(stored.outcomes, '2026-07-25'), false);
 });
 
 test('cross-origin writes, wrong content type, invalid shape, and oversized bodies are rejected', async (t) => {
@@ -97,35 +119,49 @@ test('cross-origin writes, wrong content type, invalid shape, and oversized bodi
   const missingOrigin = await fetch(`${baseUrl}/api/outcomes/today`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ played: true })
+    body: JSON.stringify({ played: false, expectedLeagueDay: '2026-07-24' })
   });
   assert.equal(missingOrigin.status, 403);
 
   const crossOrigin = await fetch(`${baseUrl}/api/outcomes/today`, {
     method: 'PUT',
     headers: { Origin: 'https://example.com', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ played: true })
+    body: JSON.stringify({ played: false, expectedLeagueDay: '2026-07-24' })
   });
   assert.equal(crossOrigin.status, 403);
 
   const wrongType = await fetch(`${baseUrl}/api/outcomes/today`, {
     method: 'PUT',
     headers: { Origin: baseUrl, 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ played: true })
+    body: JSON.stringify({ played: false, expectedLeagueDay: '2026-07-24' })
   });
   assert.equal(wrongType.status, 415);
+
+  const cachedYesClient = await fetch(`${baseUrl}/api/outcomes/today`, {
+    method: 'PUT',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ played: true, expectedLeagueDay: '2026-07-24' })
+  });
+  assert.equal(cachedYesClient.status, 400);
+
+  const missingPrecondition = await fetch(`${baseUrl}/api/outcomes/today`, {
+    method: 'PUT',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ played: false })
+  });
+  assert.equal(missingPrecondition.status, 400);
 
   const invalid = await fetch(`${baseUrl}/api/outcomes/today`, {
     method: 'PUT',
     headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ played: true, date: '2026-01-01' })
+    body: JSON.stringify({ played: false, expectedLeagueDay: '2026-07-24', date: '2026-01-01' })
   });
   assert.equal(invalid.status, 400);
 
   const oversized = await fetch(`${baseUrl}/api/outcomes/today`, {
     method: 'PUT',
     headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ played: true, padding: 'x'.repeat(2000) })
+    body: JSON.stringify({ played: false, expectedLeagueDay: '2026-07-24', padding: 'x'.repeat(2000) })
   });
   assert.equal(oversized.status, 413);
 });
@@ -138,7 +174,7 @@ test('health checks real storage writes and reports runtime, schema, and model r
   assert.equal(health.status, 'ok');
   assert.equal(health.storage.writable, true);
   assert.equal(health.storage.recoveredFromBackup, false);
-  assert.equal(health.schemaVersion, 1);
+  assert.equal(health.schemaVersion, 2);
   assert.equal(health.modelReady, true);
   assert.match(health.runtime.node, /^v\d+/);
 });
@@ -146,7 +182,7 @@ test('health checks real storage writes and reports runtime, schema, and model r
 test('health fails closed when the live model state is not ready', async (t) => {
   const service = {
     async getState() { return { statement: 'incomplete' }; },
-    async setTodayOutcome() { throw new Error('not used'); }
+    async recordTodayNo() { throw new Error('not used'); }
   };
   const { baseUrl } = await serverFixture(t, { service });
   const response = await fetch(`${baseUrl}/api/health`);
@@ -175,7 +211,7 @@ test('in-memory throttle limits floods without persisting client addresses', asy
   const options = {
     method: 'PUT',
     headers: { Origin: baseUrl, 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.8' },
-    body: JSON.stringify({ played: true })
+    body: JSON.stringify({ played: false, expectedLeagueDay: '2026-07-24' })
   };
   assert.equal((await fetch(`${baseUrl}/api/outcomes/today`, options)).status, 200);
   assert.equal((await fetch(`${baseUrl}/api/outcomes/today`, options)).status, 429);
@@ -195,7 +231,7 @@ test('failed atomic save returns an error and keeps the prior state intact', asy
   const response = await fetch(`${fixture.baseUrl}/api/outcomes/today`, {
     method: 'PUT',
     headers: { Origin: fixture.baseUrl, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ played: true })
+    body: JSON.stringify({ played: false, expectedLeagueDay: '2026-07-24' })
   });
   assert.equal(response.status, 500);
   assert.deepEqual(fixture.store.getSnapshot(), before);

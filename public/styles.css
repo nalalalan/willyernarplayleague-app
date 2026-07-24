@@ -182,6 +182,7 @@ main {
 .chart-value {
   fill: var(--muted);
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .chart-value {
@@ -242,13 +243,6 @@ main {
   margin-top: 24px;
 }
 
-.question {
-  margin: 0 0 15px;
-  font-size: 16px;
-  font-weight: 690;
-  line-height: 1.35;
-}
-
 .answer-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -270,20 +264,13 @@ main {
   transform: translateY(-1px);
 }
 
-.answer-yes {
-  border: 1px solid var(--accent-dark);
-  background: var(--accent-dark);
-  color: #fffdf8;
-}
-
-.answer-no {
+.answer-exception {
   border: 1px solid rgba(64, 54, 48, .32);
   background: transparent;
   color: var(--ink);
 }
 
 .answer-button:focus-visible,
-.change-answer:focus-visible,
 .suite-ao-home:focus-visible,
 .suite-app-brand:focus-visible {
   outline: 3px solid var(--accent-dark);
@@ -293,18 +280,6 @@ main {
 .answer-button:disabled {
   opacity: .56;
   cursor: wait;
-}
-
-.change-answer {
-  min-height: 44px;
-  padding: 8px 0;
-  border: 0;
-  border-bottom: 1px solid currentColor;
-  background: transparent;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 650;
-  cursor: pointer;
 }
 
 .save-status {
@@ -432,7 +407,7 @@ main {
 
   .answer-buttons {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .answer-button {

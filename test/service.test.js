@@ -5,11 +5,15 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { computeForecast } = require('../lib/model');
 const { StateStore } = require('../lib/state-store');
 const {
   LeagueService,
+  SCHEMA_VERSION,
+  SEED_VERSION,
   createDefaultState,
   migrateState,
+  snapshotForecast,
   validateState
 } = require('../lib/state');
 
@@ -27,111 +31,208 @@ async function serviceFixture(t, initialInstant = '2026-07-24T16:00:00.000Z') {
   };
 }
 
-test('seed migration exposes exactly four authoritative No outcomes newest-first', async (t) => {
-  const { store, service } = await serviceFixture(t, '2026-07-23T16:00:00.000Z');
-  const state = await service.getState();
-  assert.equal(state.todayOutcome, false);
-  assert.equal(state.todayProbability, null);
-  assert.equal(state.tomorrowProbability, 25);
-  assert.deepEqual(state.history.map((entry) => entry.text), [
-    '7/23/26: yernar did not play league',
-    '7/22/26: yernar did not play league',
-    '7/13/26: yernar did not play league',
-    '7/4/26: yernar did not play league'
-  ]);
-  const stored = store.getSnapshot();
-  assert.equal(Object.keys(stored.outcomes).length, 4);
-  assert.equal(Object.hasOwn(stored.forecasts.official, '2026-07-23'), false);
-  assert.equal(state.chart.issued.length, 0);
-  assert.equal(state.chart.outlook.length, 7);
-});
-
-test('first view freezes the 25% official forecast before any outcome write', async (t) => {
+test('first request backfills every closed day as Yes except the four authoritative No dates', async (t) => {
   const { store, service } = await serviceFixture(t);
   const state = await service.getState();
-  assert.equal(state.statement, 'there is a 25% chance that yernar will play league today');
-  assert.equal(state.question, 'did yernar play league?');
-  const official = store.getSnapshot().forecasts.official['2026-07-24'];
-  assert.equal(official.percent, 25);
-  assert.equal(official.kind, 'official');
+  const stored = store.getSnapshot();
+  assert.equal(stored.schemaVersion, SCHEMA_VERSION);
+  assert.equal(stored.seedVersion, SEED_VERSION);
+  assert.equal(stored.defaultYesPolicy.backfillThrough, '2026-07-23');
+  assert.equal(Object.keys(stored.outcomes).length, 20);
+  assert.equal(Object.values(stored.outcomes).filter((record) => record.played).length, 16);
+  assert.equal(Object.values(stored.outcomes).filter((record) => !record.played).length, 4);
+  assert.deepEqual(['2026-07-04', '2026-07-13', '2026-07-22', '2026-07-23'].map((day) => stored.outcomes[day].played), [false, false, false, false]);
+  assert.equal(stored.outcomes['2026-07-21'].source, 'historical-default-yes');
+  assert.equal(Object.hasOwn(stored.outcomes, '2026-07-24'), false);
+  assert.equal(state.todayOutcome, null);
+  assert.equal(state.todayProbability, 75);
+  assert.equal(state.statement, 'there is a 75% chance that yernar will play league today');
+  assert.equal(state.canRecordDidNotPlay, true);
+  assert.equal(state.actionLabel, "yernar didn't play league");
+  assert.equal(state.history.length, 20);
+  assert.equal(state.history[0].text, '7/23/26: yernar did not play league');
+  assert.equal(state.history.find((entry) => entry.dateKey === '2026-07-21').text, '7/21/26: yernar played league');
+});
+
+test('official forecast is created after closed-day backfill and remains frozen', async (t) => {
+  const { store, service } = await serviceFixture(t);
+  await service.getState();
+  const official = structuredClone(store.getSnapshot().forecasts.official['2026-07-24']);
+  assert.equal(official.percent, 75);
   assert.ok(Number.isFinite(official.unroundedProbability));
+  await service.recordTodayNo('2026-07-24');
+  assert.deepEqual(store.getSnapshot().forecasts.official['2026-07-24'], official);
 });
 
-test('Yes and No produce exact requested copy and recompute tomorrow', async (t) => {
+test('public service accepts only the idempotent did-not-play exception', async (t) => {
   const { store, service } = await serviceFixture(t);
   await service.getState();
-  const officialBefore = store.getSnapshot().forecasts.official['2026-07-24'];
+  const before = store.getSnapshot();
+  assert.equal(typeof service.setTodayOutcome, 'undefined');
+  assert.deepEqual(store.getSnapshot(), before);
 
-  const yes = await service.setTodayOutcome(true);
-  assert.equal(yes.statement, `yernar plays league today. there is a ${yes.tomorrowProbability}% chance that he will play league tomorrow.`);
-  assert.equal(yes.tomorrowProbability, yes.outlook.points[0].percent);
-
-  const no = await service.setTodayOutcome(false);
-  assert.equal(no.statement, `yernar does not play league today. there is a ${no.tomorrowProbability}% chance that he will play league tomorrow.`);
-  assert.equal(no.tomorrowProbability, no.outlook.points[0].percent);
-  assert.notEqual(no.tomorrowProbability, yes.tomorrowProbability);
-  assert.deepEqual(store.getSnapshot().forecasts.official['2026-07-24'], officialBefore);
-});
-
-test('answer changes upsert one canonical row, identical writes are idempotent, and audit is bounded to changes', async (t) => {
-  const { store, service } = await serviceFixture(t);
-  await service.getState();
-  await service.setTodayOutcome(true);
-  await service.setTodayOutcome(false);
-  await service.setTodayOutcome(false);
+  const first = await service.recordTodayNo('2026-07-24');
+  const second = await service.recordTodayNo('2026-07-24');
+  assert.equal(first.todayOutcome, false);
+  assert.equal(first.canRecordDidNotPlay, false);
+  assert.equal(first.actionLabel, null);
+  assert.equal(first.statement, `yernar does not play league today. there is a ${first.tomorrowProbability}% chance that he will play league tomorrow.`);
+  assert.equal(first.tomorrowProbability, first.outlook.points[0].percent);
+  assert.deepEqual(second, first);
   const stored = store.getSnapshot();
-  assert.equal(stored.outcomes['2026-07-24'].played, false);
-  assert.equal(Object.keys(stored.outcomes).filter((day) => day === '2026-07-24').length, 1);
-  assert.equal(stored.outcomeChanges.filter((event) => event.leagueDay === '2026-07-24').length, 2);
-  assert.equal(stored.audit.filter((event) => event.leagueDay === '2026-07-24').length, 2);
-  assert.equal(stored.metrics.scores.length, 0);
+  assert.equal(stored.outcomes['2026-07-24'].source, 'explicit-no');
+  assert.equal(stored.outcomeChanges.filter((event) => event.leagueDay === '2026-07-24').length, 1);
+  assert.equal(stored.audit.filter((event) => event.leagueDay === '2026-07-24').length, 1);
 });
 
-test('official outcome is scored once only after the next 6 AM cutoff', async (t) => {
+test('an unanswered day stays unresolved through 5:59 AM and finalizes Yes at 6:00 AM', async (t) => {
   const fixture = await serviceFixture(t);
   await fixture.service.getState();
-  await fixture.service.setTodayOutcome(true);
-  await fixture.service.setTodayOutcome(false);
-  assert.equal(fixture.store.getSnapshot().metrics.scores.length, 0);
-
   fixture.setInstant('2026-07-25T09:59:59.999Z');
-  await fixture.service.getState();
+  const beforeCutoff = await fixture.service.getState();
+  assert.equal(beforeCutoff.activeLeagueDay, '2026-07-24');
+  assert.equal(beforeCutoff.todayOutcome, null);
+  assert.equal(Object.hasOwn(fixture.store.getSnapshot().outcomes, '2026-07-24'), false);
   assert.equal(fixture.store.getSnapshot().metrics.scores.length, 0);
 
   fixture.setInstant('2026-07-25T10:00:00.000Z');
+  const afterCutoff = await fixture.service.getState();
+  const stored = fixture.store.getSnapshot();
+  assert.equal(afterCutoff.activeLeagueDay, '2026-07-25');
+  assert.equal(afterCutoff.todayOutcome, null);
+  assert.equal(stored.outcomes['2026-07-24'].played, true);
+  assert.equal(stored.outcomes['2026-07-24'].source, 'automatic-default-yes');
+  assert.equal(stored.metrics.scores.length, 1);
+  assert.equal(stored.metrics.scores[0].targetDay, '2026-07-24');
+  assert.equal(stored.metrics.scores[0].played, true);
   await fixture.service.getState();
-  await fixture.service.getState();
-  const scores = fixture.store.getSnapshot().metrics.scores;
-  assert.equal(scores.length, 1);
-  assert.equal(scores[0].targetDay, '2026-07-24');
-  assert.equal(scores[0].played, false);
-  assert.ok(Number.isFinite(scores[0].shadowAdaptiveProbability));
+  assert.equal(fixture.store.getSnapshot().metrics.scores.length, 1);
 });
 
-test('serialized concurrent changes deterministically leave the newest committed answer', async (t) => {
+test('an explicit No is the final scored outcome after cutoff', async (t) => {
+  const fixture = await serviceFixture(t);
+  await fixture.service.getState();
+  await fixture.service.recordTodayNo('2026-07-24');
+  fixture.setInstant('2026-07-25T10:00:00.000Z');
+  await fixture.service.getState();
+  const stored = fixture.store.getSnapshot();
+  assert.equal(stored.outcomes['2026-07-24'].source, 'explicit-no');
+  assert.equal(stored.metrics.scores.length, 1);
+  assert.equal(stored.metrics.scores[0].played, false);
+});
+
+test('historical default-Yes backfills are excluded from forecast-quality scoring', async (t) => {
+  const fixture = await serviceFixture(t);
+  await fixture.store.update((state) => {
+    const forecast = computeForecast(state, '2026-07-10');
+    state.forecasts.official['2026-07-10'] = snapshotForecast(forecast, '2026-07-10T10:00:00.000Z', 'official');
+    return { changed: true };
+  });
+  await fixture.service.getState();
+  const stored = fixture.store.getSnapshot();
+  assert.equal(stored.outcomes['2026-07-10'].source, 'historical-default-yes');
+  assert.equal(stored.metrics.scores.some((score) => score.targetDay === '2026-07-10'), false);
+});
+
+test('closed holes below the backfill marker are repaired without becoming scored evidence', async (t) => {
+  const fixture = await serviceFixture(t);
+  await fixture.service.getState();
+  await fixture.store.update((state) => {
+    delete state.outcomes['2026-07-10'];
+    return { changed: true };
+  });
+  await fixture.service.getState();
+  const restored = fixture.store.getSnapshot().outcomes['2026-07-10'];
+  assert.equal(restored.played, true);
+  assert.equal(restored.source, 'historical-default-yes');
+});
+
+test('concurrent duplicate No submissions produce one canonical change', async (t) => {
   const { store, service } = await serviceFixture(t);
   await service.getState();
-  await Promise.all([
-    service.setTodayOutcome(true),
-    service.setTodayOutcome(false)
-  ]);
+  await Promise.all([service.recordTodayNo('2026-07-24'), service.recordTodayNo('2026-07-24')]);
   const stored = store.getSnapshot();
   assert.equal(stored.outcomes['2026-07-24'].played, false);
-  const changes = stored.outcomeChanges.filter((event) => event.leagueDay === '2026-07-24');
-  assert.deepEqual(changes.map((event) => event.played), [true, false]);
-  assert.ok(changes[1].sequence > changes[0].sequence);
+  assert.equal(stored.outcomeChanges.filter((event) => event.leagueDay === '2026-07-24').length, 1);
+  assert.equal(stored.audit.filter((event) => event.leagueDay === '2026-07-24').length, 1);
 });
 
-test('outlook snapshot recomputes after an answer changes and contains exact future dates', async (t) => {
+test('concurrent first reads materialize backfill and official forecast only once', async (t) => {
   const { store, service } = await serviceFixture(t);
-  await service.getState();
-  const yes = await service.setTodayOutcome(true);
-  const yesSnapshot = store.getSnapshot().forecasts.outlook;
-  const no = await service.setTodayOutcome(false);
-  const noSnapshot = store.getSnapshot().forecasts.outlook;
-  assert.notDeepEqual(no.outlook.points, yes.outlook.points);
-  assert.notEqual(noSnapshot.basisRevision, yesSnapshot.basisRevision);
-  assert.deepEqual(no.outlook.points.map((point) => point.targetDay), [
+  const states = await Promise.all([service.getState(), service.getState(), service.getState()]);
+  assert.ok(states.every((state) => state.todayProbability === 75 && state.history.length === 20));
+  const stored = store.getSnapshot();
+  assert.equal(Object.keys(stored.forecasts.official).filter((day) => day === '2026-07-24').length, 1);
+  assert.equal(stored.outcomeChanges.filter((event) => event.source === 'historical-default-yes').length, 16);
+  assert.deepEqual(states[0].chart.issued.map((point) => point.targetDay), ['2026-07-24']);
+});
+
+test('legacy active Yes remains valid while new public Yes writes are impossible', async (t) => {
+  const { store, service } = await serviceFixture(t);
+  let frozenOfficial;
+  await store.update((state) => {
+    const forecast = computeForecast(state, '2026-07-24');
+    frozenOfficial = snapshotForecast(forecast, '2026-07-24T10:00:00.000Z', 'official');
+    state.forecasts.official['2026-07-24'] = structuredClone(frozenOfficial);
+    state.outcomes['2026-07-24'] = {
+      played: true,
+      source: 'answer',
+      recordedAt: '2026-07-24T10:01:00.000Z',
+      revision: 1
+    };
+    return { changed: true };
+  });
+  const state = await service.getState();
+  assert.equal(state.todayOutcome, true);
+  assert.equal(state.canRecordDidNotPlay, false);
+  assert.deepEqual(store.getSnapshot().forecasts.official['2026-07-24'], frozenOfficial);
+  assert.equal(typeof service.setTodayOutcome, 'undefined');
+});
+
+for (const boundary of [
+  {
+    label: 'DST end',
+    before: '2026-11-01T10:59:59.999Z',
+    after: '2026-11-01T11:00:00.000Z',
+    oldDay: '2026-10-31',
+    newDay: '2026-11-01'
+  },
+  {
+    label: 'DST start',
+    before: '2027-03-14T09:59:59.999Z',
+    after: '2027-03-14T10:00:00.000Z',
+    oldDay: '2027-03-13',
+    newDay: '2027-03-14'
+  }
+]) {
+  test(`${boundary.label} stale-day precondition prevents a No from crossing the 6 AM boundary`, async (t) => {
+    const fixture = await serviceFixture(t, boundary.before);
+    const before = await fixture.service.getState();
+    assert.equal(before.activeLeagueDay, boundary.oldDay);
+    fixture.setInstant(boundary.after);
+    await assert.rejects(
+      fixture.service.recordTodayNo(boundary.oldDay),
+      (error) => {
+        assert.equal(error.statusCode, 409);
+        assert.equal(error.state.activeLeagueDay, boundary.newDay);
+        return true;
+      }
+    );
+    const stored = fixture.store.getSnapshot();
+    assert.equal(stored.outcomes[boundary.oldDay].played, true);
+    assert.equal(Object.hasOwn(stored.outcomes, boundary.newDay), false);
+  });
+}
+
+test('recording No recomputes the provisional outlook but not its exact dates', async (t) => {
+  const { store, service } = await serviceFixture(t);
+  const before = await service.getState();
+  const basisBefore = store.getSnapshot().forecasts.outlook.basisRevision;
+  const after = await service.recordTodayNo('2026-07-24');
+  const basisAfter = store.getSnapshot().forecasts.outlook.basisRevision;
+  assert.notDeepEqual(after.outlook.points, before.outlook.points);
+  assert.ok(basisAfter > basisBefore);
+  assert.deepEqual(after.outlook.points.map((point) => point.targetDay), [
     '2026-07-25', '2026-07-26', '2026-07-27', '2026-07-28',
     '2026-07-29', '2026-07-30', '2026-07-31'
   ]);
@@ -139,7 +240,7 @@ test('outlook snapshot recomputes after an answer changes and contains exact fut
 
 test('no network address or personal context is persisted', async (t) => {
   const { store, service } = await serviceFixture(t);
-  await service.setTodayOutcome(true);
+  await service.recordTodayNo('2026-07-24');
   const serialized = JSON.stringify(store.getSnapshot()).toLowerCase();
   assert.equal(serialized.includes('ipaddress'), false);
   assert.equal(serialized.includes('fatigue'), false);

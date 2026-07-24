@@ -235,11 +235,17 @@ function createRequestHandler({
           return;
         }
         const body = await readJsonBody(request);
-        if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.played !== 'boolean' || Object.keys(body).some((key) => key !== 'played')) {
-          writeJson(response, 400, { error: 'body must be { "played": true } or { "played": false }' });
+        if (!body
+          || typeof body !== 'object'
+          || Array.isArray(body)
+          || body.played !== false
+          || typeof body.expectedLeagueDay !== 'string'
+          || !/^\d{4}-\d{2}-\d{2}$/.test(body.expectedLeagueDay)
+          || Object.keys(body).some((key) => !['played', 'expectedLeagueDay'].includes(key))) {
+          writeJson(response, 400, { error: 'body must be { "played": false, "expectedLeagueDay": "YYYY-MM-DD" }' });
           return;
         }
-        writeJson(response, 200, await service.setTodayOutcome(body.played));
+        writeJson(response, 200, await service.recordTodayNo(body.expectedLeagueDay));
         return;
       }
 
@@ -252,7 +258,9 @@ function createRequestHandler({
       const statusCode = error.statusCode || 500;
       if (statusCode >= 500) console.error(error);
       if (url.pathname.startsWith('/api/')) {
-        writeJson(response, statusCode, { error: statusCode >= 500 ? 'server error' : error.message });
+        const payload = { error: statusCode >= 500 ? 'server error' : error.message };
+        if (statusCode === 409 && error.state) payload.state = error.state;
+        writeJson(response, statusCode, payload);
       } else {
         writeText(response, statusCode, statusCode >= 500 ? 'server error' : error.message);
       }

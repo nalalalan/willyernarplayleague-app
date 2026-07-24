@@ -72,6 +72,28 @@ test('backup recovery restores a valid generation and reports degraded health', 
   assert.equal(validateState(JSON.parse(await fs.readFile(recovered.filePath, 'utf8'))), true);
 });
 
+test('backup recovery is followed by canonical closed-day backfill', async (t) => {
+  const dataDir = await temporaryDirectory(t);
+  const store = await initializedStore(t, { dataDir });
+  await store.update((state) => {
+    state.outcomeRevision = 1;
+    return { changed: true };
+  });
+  await fs.writeFile(store.filePath, '{broken json', 'utf8');
+  const recovered = new StateStore({ dataDir });
+  await recovered.initialize({ createDefault: createDefaultState, migrate: migrateState, validate: validateState });
+  const service = new LeagueService({
+    store: recovered,
+    clock: () => new Date('2026-07-24T16:00:00.000Z')
+  });
+  const state = await service.getState();
+  assert.equal((await recovered.health()).recoveredFromBackup, true);
+  assert.equal(state.history.length, 20);
+  assert.equal(state.todayOutcome, null);
+  assert.equal(state.todayProbability, 75);
+  assert.equal(Object.values(recovered.getSnapshot().outcomes).filter((record) => record.played).length, 16);
+});
+
 test('a valid backup is recovered when the primary file is missing', async (t) => {
   const dataDir = await temporaryDirectory(t);
   const store = await initializedStore(t, { dataDir });
@@ -113,7 +135,7 @@ test('semantic corruption is rejected and recovered from the prior generation', 
   assert.equal((await recovered.health()).recoveredFromBackup, true);
 });
 
-test('migration restores every absent authoritative seed without overwriting present data', async (t) => {
+test('migration restores and preserves every authoritative No seed while upgrading policy state', async (t) => {
   const dataDir = await temporaryDirectory(t);
   const state = createDefaultState();
   delete state.outcomes['2026-07-23'];
@@ -123,6 +145,9 @@ test('migration restores every absent authoritative seed without overwriting pre
     recordedAt: '2026-07-04T16:00:00.000Z',
     revision: 2
   };
+  state.schemaVersion = 1;
+  state.seedVersion = 1;
+  delete state.defaultYesPolicy;
   await fs.writeFile(path.join(dataDir, 'state.json'), JSON.stringify(state), 'utf8');
 
   const store = new StateStore({ dataDir });
@@ -131,8 +156,15 @@ test('migration restores every absent authoritative seed without overwriting pre
   assert.deepEqual(Object.keys(snapshot.outcomes).sort(), [
     '2026-07-04', '2026-07-13', '2026-07-22', '2026-07-23'
   ]);
-  assert.equal(snapshot.outcomes['2026-07-04'].played, true);
-  assert.equal(snapshot.outcomes['2026-07-04'].source, 'answer');
+  assert.equal(snapshot.schemaVersion, 2);
+  assert.equal(snapshot.seedVersion, 2);
+  assert.deepEqual(snapshot.defaultYesPolicy, { version: 1, backfillThrough: null });
+  assert.equal(snapshot.outcomes['2026-07-04'].played, false);
+  assert.equal(snapshot.outcomes['2026-07-04'].source, 'authoritative-seed');
+  const correction = snapshot.outcomeChanges.find((event) => event.leagueDay === '2026-07-04');
+  assert.equal(correction.previousPlayed, true);
+  assert.equal(correction.played, false);
+  assert.equal(correction.source, 'authoritative-seed-correction');
   assert.equal(snapshot.outcomes['2026-07-23'].played, false);
   assert.equal(snapshot.outcomes['2026-07-23'].source, 'authoritative-seed');
 });
@@ -183,20 +215,20 @@ test('concurrent health probes cannot collide and clear transient errors after s
   }
 });
 
-test('restart and reopen preserve the answer, history, and frozen official forecast', async (t) => {
+test('restart and reopen preserve the No exception, history, and frozen official forecast', async (t) => {
   const dataDir = await temporaryDirectory(t);
   const clock = () => new Date('2026-07-24T16:00:00.000Z');
   const firstStore = await initializedStore(t, { dataDir });
   const firstService = new LeagueService({ store: firstStore, clock });
   await firstService.getState();
-  await firstService.setTodayOutcome(true);
+  await firstService.recordTodayNo('2026-07-24');
   const officialBefore = firstStore.getSnapshot().forecasts.official['2026-07-24'];
 
   const reopenedStore = new StateStore({ dataDir });
   await reopenedStore.initialize({ createDefault: createDefaultState, migrate: migrateState, validate: validateState });
   const reopenedService = new LeagueService({ store: reopenedStore, clock });
   const state = await reopenedService.getState();
-  assert.equal(state.todayOutcome, true);
-  assert.equal(state.history[0].text, '7/24/26: yernar played league');
+  assert.equal(state.todayOutcome, false);
+  assert.equal(state.history[0].text, '7/24/26: yernar did not play league');
   assert.deepEqual(reopenedStore.getSnapshot().forecasts.official['2026-07-24'], officialBefore);
 });
