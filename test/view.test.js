@@ -134,7 +134,7 @@ test('server and browser use one chart renderer and one editorial layout contrac
 test('tracked visual QA evidence remains bound to the integrated composition sources', () => {
   const resultPath = path.join(__dirname, 'visual-qa-result.json');
   const result = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
-  assert.equal(result.schema_version, 1);
+  assert.equal(result.schema_version, 2);
   assert.equal(result.artifact, 'integrated-text-chart-composition');
   assert.match(result.implementation_commit, /^[0-9a-f]{40}$/);
 
@@ -153,13 +153,32 @@ test('tracked visual QA evidence remains bound to the integrated composition sou
   assert.ok(result.viewports.every((viewport) => viewport.console_errors === 0));
   assert.ok(result.viewports.every((viewport) => viewport.past_points === 20));
   assert.ok(result.viewports.every((viewport) => viewport.future_points === 30));
+  assert.ok(result.viewports.every((viewport) => viewport.visible_past_markers === result.acceptance.visible_past_markers));
+  assert.ok(result.viewports.every((viewport) => viewport.visible_future_markers === result.acceptance.visible_future_markers));
+  assert.ok(result.viewports.every((viewport) => viewport.past_geometry === result.acceptance.past_geometry));
+  assert.ok(result.viewports.every((viewport) => viewport.mobile_date_labels === result.acceptance.mobile_date_labels));
+  assert.equal(result.series.visible_past_markers, result.acceptance.visible_past_markers);
+  assert.equal(result.series.visible_future_markers, result.acceptance.visible_future_markers);
+  assert.equal(result.series.past_geometry, result.acceptance.past_geometry);
 
   const desktop = result.viewports.find((viewport) => viewport.width === 1280);
   assert.equal(desktop.statement_lines, 3);
   assert.ok(desktop.column_gap_px <= result.acceptance.maximum_column_gap_px);
   assert.ok(Math.abs(desktop.plot_top_delta_px) <= result.acceptance.maximum_absolute_plot_top_delta_px);
+  assert.ok(desktop.rendered_tick_font_px >= result.acceptance.minimum_rendered_tick_font_px);
+  assert.ok(desktop.rendered_y_label_font_px >= result.acceptance.minimum_rendered_y_label_font_px);
+  assert.ok(desktop.rendered_legend_font_px >= result.acceptance.minimum_rendered_legend_font_px);
+  assert.ok(desktop.tick_glyph_bbox_height_px >= result.acceptance.minimum_tick_glyph_bbox_height_px);
+  assert.ok(desktop.y_label_glyph_bbox_height_px >= result.acceptance.minimum_y_label_glyph_bbox_height_px);
+  assert.ok(desktop.inner_plot_height_px >= result.acceptance.minimum_inner_plot_height_px);
+  assert.ok(desktop.inner_plot_height_px <= result.acceptance.maximum_inner_plot_height_px);
+  assert.ok(desktop.plot_width_ratio >= result.acceptance.minimum_plot_width_ratio);
+  assert.ok(Math.abs(desktop.plot_statement_center_delta_px) <= result.acceptance.maximum_absolute_plot_statement_center_delta_px);
+  assert.equal(result.viewports.find((viewport) => viewport.width === 1024).layout_mode, 'editorial_split');
   assert.equal(result.viewports.find((viewport) => viewport.width === 999).layout_mode, 'stacked');
-  assert.equal(result.viewports.find((viewport) => viewport.width === 375).layout_mode, 'stacked_compact');
+  const mobile = result.viewports.find((viewport) => viewport.width === 375);
+  assert.equal(mobile.layout_mode, 'stacked_compact');
+  assert.ok(mobile.rendered_tick_font_px >= result.acceptance.minimum_mobile_rendered_tick_font_px);
 });
 
 test('prediction renders only the single did-not-play exception action while today is open', () => {
