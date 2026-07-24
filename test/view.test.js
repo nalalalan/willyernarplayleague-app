@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const crypto = require('node:crypto');
 const { addDays } = require('../lib/time');
 const { chartGeometry, renderChart, renderPrediction } = require('../lib/view');
 const chartModule = require('../public/chart');
@@ -114,6 +115,37 @@ test('server and browser use one chart renderer and one editorial layout contrac
   assert.doesNotMatch(css.match(/\.forecast-layout \{([\s\S]*?)\n\}/)[1], /border-bottom/);
   assert.match(css, /\.chart-legend \{[\s\S]*position: absolute/);
   assert.match(css, /stroke-width: var\(--chart-line-width\)/);
+});
+
+test('tracked visual QA evidence remains bound to the integrated composition sources', () => {
+  const resultPath = path.join(__dirname, 'visual-qa-result.json');
+  const result = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+  assert.equal(result.schema_version, 1);
+  assert.equal(result.artifact, 'integrated-text-chart-composition');
+  assert.match(result.implementation_commit, /^[0-9a-f]{40}$/);
+
+  for (const [relativePath, expectedHash] of Object.entries(result.source_sha256)) {
+    const source = fs.readFileSync(path.join(__dirname, '..', relativePath));
+    const actualHash = crypto.createHash('sha256').update(source).digest('hex').toUpperCase();
+    assert.equal(actualHash, expectedHash, `${relativePath} drifted after visual QA`);
+  }
+
+  assert.equal(result.renderer_parity.ssr_browser_markup_equal, true);
+  assert.equal(result.renderer_parity.client_geometry_duplicate, false);
+  assert.equal(result.renderer_parity.hydration_shift_px, 0);
+  assert.deepEqual(result.viewports.map((viewport) => viewport.width), [1440, 1280, 1024, 999, 375]);
+  assert.ok(result.viewports.every((viewport) => viewport.overflow === false));
+  assert.ok(result.viewports.every((viewport) => viewport.legend_inside_plot === true));
+  assert.ok(result.viewports.every((viewport) => viewport.console_errors === 0));
+  assert.ok(result.viewports.every((viewport) => viewport.past_points === 20));
+  assert.ok(result.viewports.every((viewport) => viewport.future_points === 30));
+
+  const desktop = result.viewports.find((viewport) => viewport.width === 1280);
+  assert.equal(desktop.statement_lines, 3);
+  assert.ok(desktop.column_gap_px <= result.acceptance.maximum_column_gap_px);
+  assert.ok(Math.abs(desktop.plot_top_delta_px) <= result.acceptance.maximum_absolute_plot_top_delta_px);
+  assert.equal(result.viewports.find((viewport) => viewport.width === 999).layout_mode, 'stacked');
+  assert.equal(result.viewports.find((viewport) => viewport.width === 375).layout_mode, 'stacked_compact');
 });
 
 test('prediction renders only the single did-not-play exception action while today is open', () => {

@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "artifact": "integrated-text-chart-composition",
+  "implementation_commit": "09dc09021a5245889c7ecbe87cb6782abc92cf9a",
+  "source_sha256": {
+    "public/chart.js": "125B5BB4292BA1758537882DCD0D8F682D8BB3868CDFA2E4B0220CE58FCE9DAC",
+    "public/styles.css": "46812842FDFE511A633271C1BD4E01C3E3BFDFC884CCCD4FF6E0EF4A6AD6E44F",
+    "lib/view.js": "2027F03D4AD21BED2C41EBA8F56F4F943DDF1C63F1E82A31223E68D11B70E744",
+    "public/app.js": "8A59600B95D78FA50BCBDF3E0988B37183574401B8D8874B5C2841FA749BA6D5"
+  },
+  "renderer_parity": {
+    "ssr_browser_markup_equal": true,
+    "client_geometry_duplicate": false,
+    "hydration_shift_px": 0,
+    "test": "server and browser use one chart renderer and one editorial layout contract"
+  },
+  "series": {
+    "past_points": 20,
+    "future_points": 30
+  },
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 810,
+      "css_viewport_width": 1425,
+      "layout_mode": "editorial_split",
+      "statement_lines": 3,
+      "column_gap_px": 24,
+      "stack_gap_px": null,
+      "plot_top_delta_px": 12.6523,
+      "legend_inside_plot": true,
+      "past_points": 20,
+      "future_points": 30,
+      "overflow": false,
+      "console_errors": 0,
+      "hydration_shift_px": 0
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "css_viewport_width": 1265,
+      "layout_mode": "editorial_split",
+      "statement_lines": 3,
+      "column_gap_px": 24,
+      "stack_gap_px": null,
+      "plot_top_delta_px": 11.2984,
+      "legend_inside_plot": true,
+      "past_points": 20,
+      "future_points": 30,
+      "overflow": false,
+      "console_errors": 0,
+      "hydration_shift_px": 0
+    },
+    {
+      "width": 1024,
+      "height": 720,
+      "css_viewport_width": 1009,
+      "layout_mode": "editorial_split",
+      "statement_lines": 4,
+      "column_gap_px": 20.4766,
+      "stack_gap_px": null,
+      "plot_top_delta_px": 8.9074,
+      "legend_inside_plot": true,
+      "past_points": 20,
+      "future_points": 30,
+      "overflow": false,
+      "console_errors": 0,
+      "hydration_shift_px": 0
+    },
+    {
+      "width": 999,
+      "height": 760,
+      "css_viewport_width": 984,
+      "layout_mode": "stacked",
+      "statement_lines": null,
+      "column_gap_px": null,
+      "stack_gap_px": 28,
+      "plot_top_delta_px": null,
+      "legend_inside_plot": true,
+      "past_points": 20,
+      "future_points": 30,
+      "overflow": false,
+      "console_errors": 0,
+      "hydration_shift_px": 0
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "css_viewport_width": 360,
+      "layout_mode": "stacked_compact",
+      "statement_lines": 4,
+      "column_gap_px": null,
+      "stack_gap_px": 24,
+      "plot_top_delta_px": null,
+      "legend_inside_plot": true,
+      "past_points": 20,
+      "future_points": 30,
+      "overflow": false,
+      "console_errors": 0,
+      "hydration_shift_px": 0
+    }
+  ],
+  "acceptance": {
+    "desktop_width": 1280,
+    "desktop_statement_lines": 3,
+    "maximum_column_gap_px": 24,
+    "maximum_absolute_plot_top_delta_px": 16,
+    "legend_inside_plot_required": true,
+    "overflow_allowed": false,
+    "console_errors_allowed": 0,
+    "hydration_shift_allowed_px": 0
+  }
+}
