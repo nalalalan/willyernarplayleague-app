@@ -12,49 +12,49 @@
 
   const freeze = (value) => Object.freeze(value);
   const CHART_CONFIG = freeze({
-    tickEveryDays: 10,
+    tickEveryDays: freeze({ desktop: 10, mobile: 15 }),
     layouts: freeze({
       desktop: freeze({
         width: 680,
-        height: 230,
-        left: 56,
-        right: 612,
-        top: 14,
-        middle: 98,
+        height: 246,
+        left: 60,
+        right: 646,
+        top: 18,
+        middle: 100,
         bottom: 182,
-        axisX: 47,
-        labelY: 214,
-        yLabelX: 14,
-        yLabelY: 98,
-        pointRadius: 2.5
+        axisX: 50,
+        labelY: 228,
+        yLabelX: 17,
+        yLabelY: 100,
+        pointRadius: 3.2
       }),
       mobile: freeze({
         width: 360,
-        height: 206,
-        left: 52,
-        right: 348,
-        top: 14,
-        middle: 76,
-        bottom: 138,
-        axisX: 44,
-        labelY: 174,
-        yLabelX: 14,
-        yLabelY: 76,
-        pointRadius: 2
+        height: 246,
+        left: 54,
+        right: 346,
+        top: 46,
+        middle: 118,
+        bottom: 190,
+        axisX: 45,
+        labelY: 228,
+        yLabelX: 16,
+        yLabelY: 118,
+        pointRadius: 2.2
       })
     }),
     palette: freeze({
-      past: '#614c68',
-      future: '#704a16',
-      muted: '#554b44',
-      grid: 'rgba(64, 54, 48, .16)',
-      boundary: 'rgba(64, 54, 48, .34)'
+      past: '#5c4862',
+      future: '#704b19',
+      muted: '#493f39',
+      grid: 'rgba(64, 54, 48, .10)',
+      boundary: 'rgba(64, 54, 48, .24)'
     }),
     series: freeze({
-      lineWidth: 3,
-      pastPointWidth: 1.8,
-      futurePointWidth: 1.8,
-      futureDash: '8 7'
+      lineWidth: 3.25,
+      pastPointWidth: 1.9,
+      futurePointWidth: 1.9,
+      futureDash: '9 8'
     })
   });
 
@@ -117,7 +117,8 @@
       item.targetDay > activeDay && item.targetDay <= windowEnd
     )));
     const ticks = [];
-    for (let offset = 0; offset <= span; offset += CHART_CONFIG.tickEveryDays) {
+    const tickEveryDays = CHART_CONFIG.tickEveryDays[layoutName] || CHART_CONFIG.tickEveryDays.desktop;
+    for (let offset = 0; offset <= span; offset += tickEveryDays) {
       const targetDay = addDays(windowStart, offset);
       ticks.push({ targetDay, x: pointX(targetDay), active: targetDay === activeDay });
     }
@@ -140,6 +141,18 @@
 
   function pointString(points) {
     return points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ');
+  }
+
+  function stepPath(points) {
+    if (!points.length) return '';
+    const commands = [`M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`];
+    for (let index = 1; index < points.length; index += 1) {
+      const previous = points[index - 1];
+      const point = points[index];
+      const midpoint = ((previous.x + point.x) / 2).toFixed(2);
+      commands.push(`H ${midpoint} V ${point.y.toFixed(2)} H ${point.x.toFixed(2)}`);
+    }
+    return commands.join(' ');
   }
 
   function continuousSegments(points) {
@@ -168,8 +181,19 @@
     const description = `${pastDescription} ${futureDescription}`;
     const renderLines = (points, kind) => continuousSegments(points)
       .filter((segment) => segment.length > 1)
-      .map((segment) => `<polyline class="chart-line chart-line-${kind}" points="${pointString(segment)}"/>`)
+      .map((segment) => kind === 'past'
+        ? `<path class="chart-line chart-line-past chart-step" d="${stepPath(segment)}"/>`
+        : `<polyline class="chart-line chart-line-future" points="${pointString(segment)}"/>`)
       .join('');
+    const visibleMarkers = (points, kind) => {
+      if (kind === 'past') return points.filter((point) => point.played === false);
+      return points.filter((point, index) => (
+        index === 0
+        || index === points.length - 1
+        || (point.probability < points[index - 1].probability
+          && point.probability < points[index + 1].probability)
+      ));
+    };
     const renderPoints = (points, kind) => points.map((point) => {
       const label = kind === 'past'
         ? `${displayDate(point.targetDay)}: yernar ${point.played ? 'played' : 'did not play'} league`
@@ -194,8 +218,8 @@
       ${ticks}
       ${renderLines(geometry.past, 'past')}
       ${renderLines(geometry.future, 'future')}
-      ${renderPoints(geometry.past, 'past')}
-      ${renderPoints(geometry.future, 'future')}
+      ${renderPoints(visibleMarkers(geometry.past, 'past'), 'past')}
+      ${renderPoints(visibleMarkers(geometry.future, 'future'), 'future')}
     </svg>`;
   }
 

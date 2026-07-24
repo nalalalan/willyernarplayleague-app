@@ -41,24 +41,34 @@ test('chart uses one continuous 61-day calendar domain without inventing missing
     assert.ok(Math.abs(geometry.past.at(-1).x - (geometry.layout.left + 30 * dailyStep)) < 1e-9);
     assert.ok(Math.abs(geometry.future[0].x - (geometry.layout.left + 31 * dailyStep)) < 1e-9);
     assert.equal(geometry.future.at(-1).x, geometry.layout.right);
-    assert.deepEqual(geometry.ticks.map((tick) => tick.targetDay), [
-      windowStart,
-      addDays(windowStart, 10),
-      addDays(windowStart, 20),
-      activeDay,
-      addDays(activeDay, 10),
-      addDays(activeDay, 20),
-      windowEnd
-    ]);
+    assert.deepEqual(geometry.ticks.map((tick) => tick.targetDay), layoutName === 'desktop'
+      ? [
+          windowStart,
+          addDays(windowStart, 10),
+          addDays(windowStart, 20),
+          activeDay,
+          addDays(activeDay, 10),
+          addDays(activeDay, 20),
+          windowEnd
+        ]
+      : [
+          windowStart,
+          addDays(windowStart, 15),
+          activeDay,
+          addDays(activeDay, 15),
+          windowEnd
+        ]);
     assert.equal(geometry.ticks.filter((tick) => tick.active).length, 1);
   }
 
   const html = renderChart(chart);
-  assert.equal((html.match(/chart-point chart-point-past/g) || []).length, 60);
-  assert.equal((html.match(/chart-point chart-point-future/g) || []).length, 60);
+  assert.equal((html.match(/chart-point chart-point-past/g) || []).length, 12);
+  assert.equal((html.match(/chart-point chart-point-future/g) || []).length, 14);
   assert.equal((html.match(/chart-line chart-line-past/g) || []).length, 4);
   assert.equal((html.match(/chart-line chart-line-future/g) || []).length, 2);
-  assert.equal((html.match(/class="chart-date/g) || []).length, 14);
+  assert.equal((html.match(/class="chart-date/g) || []).length, 12);
+  assert.match(html, /<path class="chart-line chart-line-past chart-step" d="M /);
+  assert.doesNotMatch(html, /<polyline class="chart-line chart-line-past"/);
   assert.equal((html.match(/>probability<\/text>/g) || []).length, 2);
   assert.doesNotMatch(html, />probability over time</);
   assert.ok(html.indexOf('>past</span>') < html.indexOf('>future</span>'));
@@ -87,17 +97,17 @@ test('server and browser use one chart renderer and one editorial layout contrac
   assert.equal(browserContext.YernarLeagueChart.renderChart(chart), renderChart(chart));
   assert.deepEqual(chartModule.CHART_CONFIG.layouts.desktop, {
     width: 680,
-    height: 230,
-    left: 56,
-    right: 612,
-    top: 14,
-    middle: 98,
+    height: 246,
+    left: 60,
+    right: 646,
+    top: 18,
+    middle: 100,
     bottom: 182,
-    axisX: 47,
-    labelY: 214,
-    yLabelX: 14,
-    yLabelY: 98,
-    pointRadius: 2.5
+    axisX: 50,
+    labelY: 228,
+    yLabelX: 17,
+    yLabelY: 100,
+    pointRadius: 3.2
   });
 
   const appSource = fs.readFileSync(appSourcePath, 'utf8');
@@ -107,6 +117,7 @@ test('server and browser use one chart renderer and one editorial layout contrac
   const css = fs.readFileSync(cssPath, 'utf8');
   assert.match(css, /width: min\(1360px, calc\(100% - 48px\)\)/);
   assert.match(css, /gap: clamp\(20px, 2vw, 24px\)/);
+  assert.match(css, /grid-template-columns: minmax\(0, 1\.04fr\) minmax\(0, \.96fr\)/);
   assert.match(css, /font-size: clamp\(38px, 3vw, 46px\)/);
   assert.match(css, /line-height: 1\.06/);
   assert.match(css, /text-wrap: pretty/);
@@ -114,6 +125,9 @@ test('server and browser use one chart renderer and one editorial layout contrac
   assert.doesNotMatch(css, /max-width: 660px/);
   assert.doesNotMatch(css.match(/\.forecast-layout \{([\s\S]*?)\n\}/)[1], /border-bottom/);
   assert.match(css, /\.chart-legend \{[\s\S]*position: absolute/);
+  assert.match(css, /font-size: 14\.5px/);
+  assert.match(css, /\.chart-axis-label,[\s\S]*font-size: 17px/);
+  assert.match(css, /\.chart-y-label \{[\s\S]*font-size: 18\.5px/);
   assert.match(css, /stroke-width: var\(--chart-line-width\)/);
 });
 

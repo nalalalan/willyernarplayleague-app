@@ -111,7 +111,7 @@ main {
 
 .forecast-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, .96fr);
   align-items: start;
   gap: clamp(20px, 2vw, 24px);
   padding-bottom: clamp(24px, 3vw, 36px);
@@ -119,6 +119,10 @@ main {
 
 .forecast-layout > * {
   min-width: 0;
+}
+
+.forecast-layout > [data-prediction-root] {
+  padding-top: clamp(20px, 1.8vw, 24px);
 }
 
 .probability-chart {
@@ -138,17 +142,19 @@ main {
 .chart-legend {
   position: absolute;
   z-index: 1;
-  top: 3px;
+  top: 52px;
   right: 2px;
   display: flex;
   width: max-content;
-  padding: 3px 2px 4px 13px;
+  padding: 2px 0 3px 10px;
   flex-direction: column;
-  gap: 6px;
-  background: linear-gradient(90deg, rgba(245, 239, 230, 0), rgba(245, 239, 230, .92) 18%);
+  gap: 5px;
+  background: var(--background);
   color: var(--chart-muted);
-  font-size: 12px;
-  line-height: 1.2;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.15;
 }
 
 .chart-legend span {
@@ -160,8 +166,8 @@ main {
 
 .legend-line {
   display: inline-block;
-  width: 20px;
-  border-top: 2px solid var(--chart-past);
+  width: 28px;
+  border-top: 2.5px solid var(--chart-past);
 }
 
 .legend-future {
@@ -190,19 +196,21 @@ main {
 .chart-date,
 .chart-y-label {
   fill: var(--chart-muted);
-  font-size: 11px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
 .chart-y-label {
-  font-size: 12.5px;
-  font-weight: 760;
+  font-size: 18.5px;
+  font-weight: 600;
   letter-spacing: .02em;
 }
 
 .chart-date-active {
   fill: var(--ink);
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .chart-x-tick {
@@ -239,14 +247,14 @@ main {
 }
 
 .chart-point-past {
-  fill: var(--surface);
-  stroke: var(--chart-past);
+  fill: var(--chart-past);
+  stroke: var(--background);
   stroke-width: var(--chart-past-point-width);
 }
 
 .chart-point-future {
-  fill: var(--background);
-  stroke: var(--chart-future);
+  fill: var(--chart-future);
+  stroke: var(--background);
   stroke-width: var(--chart-future-point-width);
 }
 
@@ -349,6 +357,17 @@ main {
   border: 0;
 }
 
+@media (min-width: 1000px) and (max-width: 1100px) {
+  .chart-svg-desktop .chart-axis-label,
+  .chart-svg-desktop .chart-date {
+    font-size: 21px;
+  }
+
+  .chart-svg-desktop .chart-y-label {
+    font-size: 23px;
+  }
+}
+
 @media (max-width: 999px) {
   main {
     width: min(760px, calc(100% - 36px));
@@ -358,6 +377,14 @@ main {
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
     gap: 28px;
+  }
+
+  .forecast-layout > [data-prediction-root] {
+    padding-top: 0;
+  }
+
+  .probability-chart {
+    width: min(100%, 680px);
   }
 
 }
@@ -403,6 +430,10 @@ main {
     padding-bottom: 32px;
   }
 
+  .chart-legend {
+    top: 4px;
+  }
+
   .chart-svg-desktop {
     display: none;
   }
@@ -414,7 +445,11 @@ main {
   .chart-svg-mobile .chart-axis-label,
   .chart-svg-mobile .chart-date,
   .chart-svg-mobile .chart-y-label {
-    font-size: 13px;
+    font-size: 15.5px;
+  }
+
+  .chart-svg-mobile .chart-y-label {
+    font-size: 16.5px;
   }
 
   .probability-chart {
