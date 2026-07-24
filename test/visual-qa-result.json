@@ -1,18 +1,30 @@
 {
   "schema_version": 2,
   "artifact": "integrated-text-chart-composition",
-  "implementation_commit": "2649a7fc5dca48eb76a38f2f989d643716636831",
+  "implementation_commit": "6a00bd021ca180803b74a41ef6afaceab7cf1efe",
   "source_sha256": {
-    "public/chart.js": "909BCABDCC30D380E3FB5D1CD82DCA04FC958308A414816A20538ABF47D08C8C",
-    "public/styles.css": "F786101437BE29930D736C0EC26835397F64D867C3AAC016B88E357F81EE689D",
-    "lib/view.js": "F352D8C05B380857ED999B6AD52B0E97BCAAC570358D49816E8FB4262DE01CFF",
-    "public/app.js": "8A59600B95D78FA50BCBDF3E0988B37183574401B8D8874B5C2841FA749BA6D5"
+    "public/chart.js": "075C35034F47BEC836493B24DC8CDEE489F14B9A7BEA882007F683DAD7DB0B32",
+    "public/styles.css": "CE80C1401C81A2A1B1607C2FEBF176C0E263ACB8AF4FD08B02A6D3941A41AAFB",
+    "lib/view.js": "CC9ABD6ECE5B88C599129403F45B8C27AEF518F56E5A8C1B15280AAD474132A6",
+    "public/app.js": "67DD9D91313B1E27284B049BAF3E02A57937442CD73DBAC205A7DD44D69C8A04"
   },
   "renderer_parity": {
     "ssr_browser_markup_equal": true,
     "client_geometry_duplicate": false,
     "hydration_shift_px": 0,
     "test": "server and browser use one chart renderer and one editorial layout contract"
+  },
+  "history_deletion": {
+    "default_delete_controls_hidden": true,
+    "edit_reveals_row_controls": true,
+    "row_confirmation_required": true,
+    "cancel_preserves_entry": true,
+    "confirmed_disposable_entry_removed": true,
+    "restart_preserved_tombstone": true,
+    "production_history_mutated": false,
+    "verified_viewports": [1440, 1280, 1024, 999, 375],
+    "mobile_touch_target_px": 44,
+    "overflow": false
   },
   "series": {
     "past_points": 20,
