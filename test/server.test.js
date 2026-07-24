@@ -65,7 +65,7 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.ok(html.indexOf('suite-app-mark') < html.indexOf('suite-app-name'));
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
   assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260723\.png"/);
-  assert.match(html, /href="\/styles\.css\?v=20260724-past-results"/);
+  assert.match(html, /href="\/styles\.css\?v=20260724-wide-copy"/);
   assert.match(html, /src="\/app\.js\?v=20260724-past-results"/);
   assert.match(html, /7\/23\/26: yernar did not play league/);
 });
