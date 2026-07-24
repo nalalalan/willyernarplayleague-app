@@ -65,7 +65,7 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.ok(html.indexOf('suite-ao-home') < html.indexOf('suite-app-mark'));
   assert.ok(html.indexOf('suite-app-mark') < html.indexOf('suite-app-name'));
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
-  assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260723\.png"/);
+  assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260724\.png"/);
   assert.match(html, /href="\/chart\.css\?v=20260724-ticks-only-v1"/);
   assert.match(html, /href="\/styles\.css\?v=20260724-ticks-only-v1"/);
   assert.match(html, /src="\/chart\.js\?v=20260724-ticks-only-v1"/);
@@ -293,7 +293,14 @@ test('static identity routes work and unknown routes fail closed', async (t) => 
   const icon = await fetch(`${baseUrl}/icon.svg`);
   assert.equal(icon.status, 200);
   assert.match(icon.headers.get('content-type'), /image\/svg\+xml/);
-  assert.match(await icon.text(), /aria-label="league"/);
+  const iconSvg = await icon.text();
+  assert.match(iconSvg, /aria-label="yernar considering league"/);
+  assert.match(iconSvg, /id="hair"/);
+  assert.match(iconSvg, /id="glass"/);
+  assert.match(iconSvg, /id="shirt"/);
+  assert.match(iconSvg, /id="leagueOrb"/);
+  assert.match(iconSvg, /id="leagueGold"/);
+  assert.doesNotMatch(iconSvg, /<rect[^>]+width="128"[^>]+height="128"/);
   assert.equal((await fetch(`${baseUrl}/site.webmanifest`)).status, 200);
   const chartScript = await fetch(`${baseUrl}/chart.js`);
   assert.equal(chartScript.status, 200);
