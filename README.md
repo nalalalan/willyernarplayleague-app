@@ -20,6 +20,20 @@ npm start
 The League day changes at 6:00 AM in `America/New_York`. Production stores its
 state on a single Railway volume mounted at `/data`.
 
+The public chart uses a fixed date domain from 30 days before the active League
+day through 30 days after it. Its past series contains only real immutable
+official forecasts within that past-30-calendar-day boundary; seeded and
+backfilled outcomes never receive invented historical forecasts. The future
+series contains exactly the next 30 daily forecasts, and its first point remains
+the probability used by the tomorrow sentence.
+
+Future probabilities are produced locally with deterministic recursive
+marginalization. Branches remain exact while their count is small. Above 32
+paths, midpoint systematic resampling selects 32 equal-weight particles from the
+full normalized expansion, preserving probability-distribution diversity while
+keeping runtime bounded. The method is versioned so an older cached outlook is
+recomputed without changing any official forecast.
+
 `PUT /api/outcomes/today` accepts only
 `{ "played": false, "expectedLeagueDay": "YYYY-MM-DD" }`. The day value is an
 equality precondition, never a writable target; a stale tab receives `409` and

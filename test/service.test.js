@@ -9,13 +9,17 @@ const { computeForecast } = require('../lib/model');
 const { StateStore } = require('../lib/state-store');
 const {
   LeagueService,
+  OUTLOOK_HORIZON,
+  OUTLOOK_METHOD,
   SCHEMA_VERSION,
   SEED_VERSION,
+  buildPublicState,
   createDefaultState,
   migrateState,
   snapshotForecast,
   validateState
 } = require('../lib/state');
+const { addDays } = require('../lib/time');
 
 async function serviceFixture(t, initialInstant = '2026-07-24T16:00:00.000Z') {
   const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'yernar-service-'));
@@ -49,6 +53,12 @@ test('first request backfills every closed day as Yes except the four authoritat
   assert.equal(state.statement, 'there is a 75% chance that yernar will play league today');
   assert.equal(state.canRecordDidNotPlay, true);
   assert.equal(state.actionLabel, "yernar didn't play league");
+  assert.equal(state.chart.activeDay, '2026-07-24');
+  assert.equal(state.chart.windowStart, '2026-06-24');
+  assert.equal(state.chart.windowEnd, '2026-08-23');
+  assert.equal(state.chart.outlook.length, OUTLOOK_HORIZON);
+  assert.equal(state.chart.outlook[0].targetDay, '2026-07-25');
+  assert.equal(state.chart.outlook.at(-1).targetDay, '2026-08-23');
   assert.equal(state.history.length, 20);
   assert.equal(state.history[0].text, '7/23/26: yernar did not play league');
   assert.equal(state.history.find((entry) => entry.dateKey === '2026-07-21').text, '7/21/26: yernar played league');
@@ -167,6 +177,46 @@ test('concurrent first reads materialize backfill and official forecast only onc
   assert.deepEqual(states[0].chart.issued.map((point) => point.targetDay), ['2026-07-24']);
 });
 
+test('chart exposes a fixed 60-day domain and only real official forecasts within it', () => {
+  const state = createDefaultState();
+  const activeDay = '2026-08-10';
+  const template = computeForecast(state, addDays(activeDay, -34));
+  for (let offset = -34; offset <= 0; offset += 1) {
+    const targetDay = addDays(activeDay, offset);
+    state.forecasts.official[targetDay] = snapshotForecast(
+      { ...template, targetDay },
+      `${targetDay}T10:00:00.000Z`,
+      'official'
+    );
+  }
+
+  const publicState = buildPublicState(state, activeDay);
+  assert.equal(Object.keys(state.forecasts.official).length, 35);
+  assert.equal(publicState.chart.activeDay, activeDay);
+  assert.equal(publicState.chart.windowStart, addDays(activeDay, -30));
+  assert.equal(publicState.chart.windowEnd, addDays(activeDay, 30));
+  assert.equal(publicState.chart.issued.length, 31);
+  assert.equal(publicState.chart.issued[0].targetDay, addDays(activeDay, -30));
+  assert.equal(publicState.chart.issued.at(-1).targetDay, activeDay);
+});
+
+test('stale short or older-method outlook caches are replaced without changing official forecasts', async (t) => {
+  const { store, service } = await serviceFixture(t);
+  await service.getState();
+  const frozenOfficial = structuredClone(store.getSnapshot().forecasts.official);
+  await store.update((state) => {
+    state.forecasts.outlook.horizon = 7;
+    state.forecasts.outlook.method = 'recursive-branch-marginalization';
+    state.forecasts.outlook.points = state.forecasts.outlook.points.slice(0, 7);
+    return { changed: true };
+  });
+
+  const refreshed = await service.getState();
+  assert.equal(refreshed.outlook.method, OUTLOOK_METHOD);
+  assert.equal(refreshed.outlook.points.length, OUTLOOK_HORIZON);
+  assert.deepEqual(store.getSnapshot().forecasts.official, frozenOfficial);
+});
+
 test('legacy active Yes remains valid while new public Yes writes are impossible', async (t) => {
   const { store, service } = await serviceFixture(t);
   let frozenOfficial;
@@ -232,10 +282,10 @@ test('recording No recomputes the provisional outlook but not its exact dates', 
   const basisAfter = store.getSnapshot().forecasts.outlook.basisRevision;
   assert.notDeepEqual(after.outlook.points, before.outlook.points);
   assert.ok(basisAfter > basisBefore);
-  assert.deepEqual(after.outlook.points.map((point) => point.targetDay), [
-    '2026-07-25', '2026-07-26', '2026-07-27', '2026-07-28',
-    '2026-07-29', '2026-07-30', '2026-07-31'
-  ]);
+  assert.deepEqual(
+    after.outlook.points.map((point) => point.targetDay),
+    Array.from({ length: OUTLOOK_HORIZON }, (_, index) => addDays('2026-07-24', index + 1))
+  );
 });
 
 test('no network address or personal context is persisted', async (t) => {

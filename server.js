@@ -6,6 +6,7 @@ const fs = require('node:fs/promises');
 const { StateStore } = require('./lib/state-store');
 const {
   LeagueService,
+  OUTLOOK_HORIZON,
   SCHEMA_VERSION,
   createDefaultState,
   migrateState,
@@ -105,10 +106,10 @@ function isModelStateReady(state) {
     || !state.chart
     || !Array.isArray(state.chart.issued)
     || !Array.isArray(state.chart.outlook)
-    || state.chart.outlook.length !== 7
+    || state.chart.outlook.length !== OUTLOOK_HORIZON
     || !state.outlook
     || !Array.isArray(state.outlook.points)
-    || state.outlook.points.length !== 7) return false;
+    || state.outlook.points.length !== OUTLOOK_HORIZON) return false;
   const displayedProbability = state.todayOutcome === null
     ? state.todayProbability
     : state.tomorrowProbability;

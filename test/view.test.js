@@ -3,37 +3,58 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { addDays } = require('../lib/time');
-const { chartGeometry, renderPrediction } = require('../lib/view');
+const { chartGeometry, renderChart, renderPrediction } = require('../lib/view');
 
 function point(targetDay, percent, kind) {
   return { targetDay, percent, probability: percent / 100, kind };
 }
 
-test('responsive chart windows issued history and reserves readable space for every outlook day', () => {
-  const start = '2026-05-01';
-  const issued = Array.from({ length: 60 }, (_, index) => (
-    point(addDays(start, index), 20 + (index % 6) * 5, 'official')
+test('chart uses one continuous 61-day calendar domain without inventing missing past points', () => {
+  const activeDay = '2026-06-30';
+  const windowStart = addDays(activeDay, -30);
+  const windowEnd = addDays(activeDay, 30);
+  const issued = Array.from({ length: 31 }, (_, index) => (
+    point(addDays(windowStart, index), 55 + (index % 6), 'official')
+  )).filter((item) => item.targetDay !== addDays(activeDay, -17));
+  const outlook = Array.from({ length: 30 }, (_, index) => (
+    point(addDays(activeDay, index + 1), 70 + (index % 5), 'outlook')
   ));
-  const outlookStart = addDays(start, 60);
-  const outlook = Array.from({ length: 7 }, (_, index) => (
-    point(addDays(outlookStart, index), [25, 30, 29, 26, 27, 27, 27][index], 'outlook')
-  ));
+  const chart = { activeDay, windowStart, windowEnd, issued, outlook };
 
   for (const layoutName of ['desktop', 'mobile']) {
-    const geometry = chartGeometry({ issued, outlook }, layoutName);
-    assert.equal(geometry.issued.length, 28);
-    assert.equal(geometry.issued[0].targetDay, issued[32].targetDay);
-    assert.equal(geometry.outlook.length, 7);
-    const spacings = geometry.outlook.slice(1).map((item, index) => (
-      item.x - geometry.outlook[index].x
-    ));
-    assert.ok(Math.min(...spacings) >= (layoutName === 'mobile' ? 36 : 40));
-    assert.ok(geometry.issued.at(-1).x < geometry.outlook[0].x);
-    if (layoutName === 'mobile') {
-      assert.ok(geometry.outlook[0].x >= 120);
-      assert.ok(geometry.layout.width - geometry.outlook.at(-1).x >= 16);
-    }
+    const geometry = chartGeometry(chart, layoutName);
+    const dailyStep = (geometry.layout.right - geometry.layout.left) / 60;
+    assert.equal(geometry.past.length, 30);
+    assert.equal(geometry.future.length, 30);
+    assert.equal(geometry.windowStart, windowStart);
+    assert.equal(geometry.windowEnd, windowEnd);
+    assert.equal(geometry.past[0].x, geometry.layout.left);
+    assert.ok(Math.abs(geometry.past.at(-1).x - (geometry.layout.left + 30 * dailyStep)) < 1e-9);
+    assert.ok(Math.abs(geometry.future[0].x - (geometry.layout.left + 31 * dailyStep)) < 1e-9);
+    assert.equal(geometry.future.at(-1).x, geometry.layout.right);
+    assert.deepEqual(geometry.ticks.map((tick) => tick.targetDay), [
+      windowStart,
+      addDays(windowStart, 10),
+      addDays(windowStart, 20),
+      activeDay,
+      addDays(activeDay, 10),
+      addDays(activeDay, 20),
+      windowEnd
+    ]);
+    assert.equal(geometry.ticks.filter((tick) => tick.active).length, 1);
   }
+
+  const html = renderChart(chart);
+  assert.equal((html.match(/chart-point chart-point-past/g) || []).length, 60);
+  assert.equal((html.match(/chart-point chart-point-future/g) || []).length, 60);
+  assert.equal((html.match(/chart-line chart-line-past/g) || []).length, 4);
+  assert.equal((html.match(/chart-line chart-line-future/g) || []).length, 2);
+  assert.equal((html.match(/class="chart-date/g) || []).length, 14);
+  assert.equal((html.match(/>probability<\/text>/g) || []).length, 2);
+  assert.doesNotMatch(html, />probability over time</);
+  assert.ok(html.indexOf('>past</span>') < html.indexOf('>future</span>'));
+  assert.match(html, /7\/1\/26: 70% future/);
+  assert.match(html, /7\/30\/26: 74% future/);
 });
 
 test('prediction renders only the single did-not-play exception action while today is open', () => {

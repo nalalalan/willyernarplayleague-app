@@ -104,25 +104,28 @@ button {
 }
 
 main {
-  width: min(700px, calc(100% - 36px));
+  width: min(1180px, calc(100% - 48px));
   margin: 0 auto;
   padding: clamp(28px, 4vw, 46px) 0 56px;
 }
 
-.probability-chart {
-  padding-bottom: clamp(22px, 4vw, 34px);
+.forecast-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, .78fr) minmax(0, 1.22fr);
+  align-items: center;
+  gap: clamp(34px, 5vw, 76px);
+  padding-bottom: clamp(30px, 4vw, 46px);
   border-bottom: 1px solid var(--line);
 }
 
-.chart-heading-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 12px;
+.forecast-layout > * {
+  min-width: 0;
 }
 
-.chart-heading-row h2,
+.probability-chart {
+  min-width: 0;
+}
+
 .history h2 {
   margin: 0;
   color: var(--muted);
@@ -134,9 +137,10 @@ main {
 
 .chart-legend {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px 15px;
+  width: max-content;
+  margin: 0 0 4px auto;
+  flex-direction: column;
+  gap: 6px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.2;
@@ -155,7 +159,7 @@ main {
   border-top: 2px solid var(--accent-dark);
 }
 
-.legend-outlook {
+.legend-future {
   border-top-color: var(--gold);
   border-top-style: dashed;
 }
@@ -179,15 +183,33 @@ main {
 
 .chart-axis-label,
 .chart-date,
-.chart-value {
+.chart-y-label {
   fill: var(--muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
-.chart-value {
-  fill: var(--gold);
+.chart-y-label {
+  font-size: 12px;
   font-weight: 720;
+  letter-spacing: .02em;
+}
+
+.chart-date-active {
+  fill: var(--ink);
+  font-weight: 760;
+}
+
+.chart-x-tick {
+  stroke: rgba(64, 54, 48, .32);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-active-boundary {
+  stroke: rgba(64, 54, 48, .24);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
 
 .chart-line {
@@ -198,11 +220,11 @@ main {
   vector-effect: non-scaling-stroke;
 }
 
-.chart-line-issued {
+.chart-line-past {
   stroke: var(--accent-dark);
 }
 
-.chart-line-outlook {
+.chart-line-future {
   stroke: var(--gold);
   stroke-dasharray: 7 7;
 }
@@ -211,28 +233,27 @@ main {
   vector-effect: non-scaling-stroke;
 }
 
-.chart-point-issued {
+.chart-point-past {
   fill: var(--surface);
   stroke: var(--accent-dark);
-  stroke-width: 2.5;
+  stroke-width: 1.6;
 }
 
-.chart-point-outlook {
+.chart-point-future {
   fill: var(--background);
   stroke: var(--gold);
-  stroke-width: 2;
+  stroke-width: 1.5;
 }
 
 .prediction {
-  padding: clamp(30px, 5vw, 44px) 0 clamp(34px, 5vw, 50px);
-  border-bottom: 1px solid var(--line);
+  padding: 0;
 }
 
 .prediction-statement {
-  max-width: 660px;
+  max-width: 480px;
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(31px, 5.5vw, 48px);
+  font-size: clamp(34px, 4.2vw, 54px);
   font-weight: 400;
   letter-spacing: -.025em;
   line-height: 1.11;
@@ -291,6 +312,7 @@ main {
 }
 
 .history {
+  max-width: 700px;
   padding-top: clamp(32px, 5vw, 46px);
 }
 
@@ -321,6 +343,22 @@ main {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+@media (max-width: 899px) {
+  main {
+    width: min(760px, calc(100% - 36px));
+  }
+
+  .forecast-layout {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 28px;
+  }
+
+  .prediction-statement {
+    max-width: 680px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -359,14 +397,9 @@ main {
     padding-top: 22px;
   }
 
-  .chart-heading-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 9px;
-  }
-
-  .chart-legend {
-    justify-content: flex-start;
+  .forecast-layout {
+    gap: 24px;
+    padding-bottom: 32px;
   }
 
   .chart-svg-desktop {
@@ -379,16 +412,16 @@ main {
 
   .chart-svg-mobile .chart-axis-label,
   .chart-svg-mobile .chart-date,
-  .chart-svg-mobile .chart-value {
+  .chart-svg-mobile .chart-y-label {
     font-size: 13px;
   }
 
   .probability-chart {
-    padding-bottom: 20px;
+    padding-bottom: 0;
   }
 
   .prediction {
-    padding: 30px 0 36px;
+    padding: 0;
   }
 
   .prediction-statement {

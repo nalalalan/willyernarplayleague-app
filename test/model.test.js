@@ -2,13 +2,18 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { performance } = require('node:perf_hooks');
 const {
+  OUTLOOK_HORIZON,
+  OUTLOOK_METHOD,
+  OUTLOOK_PARTICLE_CAP,
   adaptiveSelection,
   buildRecursiveOutlook,
   calculateCandidates,
   computeForecast,
   deriveAdaptiveWeights,
-  evaluateCalibration
+  evaluateCalibration,
+  systematicResample
 } = require('../lib/model');
 const { createDefaultState } = require('../lib/state');
 const { addDays } = require('../lib/time');
@@ -141,20 +146,49 @@ test('newest-28 underperformance forces the Bayesian fallback', () => {
   assert.equal(selection.model, 'baseline');
 });
 
-test('seven-day outlook is recursively marginalized, deterministic, and never linear extrapolation', () => {
+test('systematic resampling is deterministic and normalizes raw branch weights', () => {
+  const raw = [
+    { state: { id: 'a' }, path: '00', weight: 1 },
+    { state: { id: 'b' }, path: '01', weight: 2 },
+    { state: { id: 'c' }, path: '10', weight: 3 },
+    { state: { id: 'd' }, path: '11', weight: 4 }
+  ];
+  const first = systematicResample(raw, 2);
+  const second = systematicResample(raw, 2);
+  assert.deepEqual(second, first);
+  assert.equal(first.resampled, true);
+  assert.deepEqual(first.branches.map((branch) => branch.path), ['01', '11']);
+  assert.deepEqual(first.branches.map((branch) => branch.weight), [0.5, 0.5]);
+  assert.equal(first.branches.reduce((sum, branch) => sum + branch.weight, 0), 1);
+  assert.deepEqual(raw.map((branch) => branch.weight), [1, 2, 3, 4]);
+});
+
+test('30-day outlook is causal, bounded, deterministic, and never linear extrapolation', () => {
   const state = createDefaultState();
+  const startedAt = performance.now();
   const first = buildRecursiveOutlook(state, '2026-07-23');
+  const elapsedMs = performance.now() - startedAt;
   const second = buildRecursiveOutlook(state, '2026-07-23');
   assert.deepEqual(second, first);
-  assert.equal(first.method, 'recursive-branch-marginalization');
-  assert.equal(first.points.length, 7);
-  assert.deepEqual(first.points.map((point) => point.targetDay), Array.from({ length: 7 }, (_, index) => addDays('2026-07-23', index + 1)));
+  assert.equal(first.method, OUTLOOK_METHOD);
+  assert.equal(first.horizon, OUTLOOK_HORIZON);
+  assert.equal(first.particleCap, OUTLOOK_PARTICLE_CAP);
+  assert.equal(first.points.length, OUTLOOK_HORIZON);
+  assert.deepEqual(
+    first.points.map((point) => point.targetDay),
+    Array.from({ length: OUTLOOK_HORIZON }, (_, index) => addDays('2026-07-23', index + 1))
+  );
   assert.equal(first.points[0].percent, 25);
   assert.ok(new Set(first.points.map((point) => point.percent)).size >= 3);
-  assert.deepEqual(first.points.map((point) => point.branchCount), [1, 2, 4, 8, 16, 32, 64]);
+  assert.deepEqual(first.points.slice(0, 6).map((point) => point.branchCount), [1, 2, 4, 8, 16, 32]);
+  assert.ok(first.points.every((point) => point.branchCount <= OUTLOOK_PARTICLE_CAP));
+  assert.ok(first.points.every((point) => point.uniqueBranchCount <= point.branchCount));
+  assert.ok(first.points.some((point) => point.resampled));
   assert.ok(first.points.every((point) => Math.abs(point.pathWeightTotal - 1) < 1e-12));
+  assert.ok(first.points.every((point) => point.nextBranchCount <= OUTLOOK_PARTICLE_CAP));
   const deltas = first.points.slice(1).map((point, index) => point.percent - first.points[index].percent);
   assert.ok(new Set(deltas).size > 1);
+  assert.ok(elapsedMs < 10_000, `30-day outlook took ${Math.round(elapsedMs)} ms`);
 });
 
 test('outlook marginalizes an unanswered active day without mutating it', () => {
@@ -163,7 +197,21 @@ test('outlook marginalizes an unanswered active day without mutating it', () => 
   state.forecasts.official['2026-07-24'] = { ...issued, issuedAt: '2026-07-24T10:00:00.000Z' };
   const outlook = buildRecursiveOutlook(state, '2026-07-24');
   assert.equal(outlook.points[0].branchCount, 2);
-  assert.equal(outlook.points[6].branchCount, 128);
+  assert.equal(outlook.points.at(-1).branchCount, OUTLOOK_PARTICLE_CAP);
   assert.equal(Object.hasOwn(state.outcomes, '2026-07-24'), false);
   assert.ok(outlook.points.every((point) => Math.abs(point.pathWeightTotal - 1) < 1e-12));
+
+  const yesState = {
+    ...state,
+    outcomes: { ...state.outcomes, '2026-07-24': { played: true, source: 'test-path' } }
+  };
+  const noState = {
+    ...state,
+    outcomes: { ...state.outcomes, '2026-07-24': { played: false, source: 'test-path' } }
+  };
+  const exactTomorrow = (
+    issued.unroundedProbability * computeForecast(yesState, '2026-07-25').unroundedProbability
+    + (1 - issued.unroundedProbability) * computeForecast(noState, '2026-07-25').unroundedProbability
+  );
+  assert.equal(outlook.points[0].percent, Math.round(exactTomorrow * 100));
 });

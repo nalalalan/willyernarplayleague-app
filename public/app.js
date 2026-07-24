@@ -11,12 +11,12 @@
   const svgNamespace = 'http://www.w3.org/2000/svg';
   const chartLayouts = {
     desktop: {
-      width: 680, height: 218, left: 58, right: 642, historyRight: 370,
-      outlookLeft: 400, top: 22, middle: 99, bottom: 176, axisX: 47, labelY: 204
+      width: 640, height: 262, left: 62, right: 626, top: 20, middle: 116,
+      bottom: 212, axisX: 53, labelY: 240, yLabelX: 16, yLabelY: 116, pointRadius: 2.4
     },
     mobile: {
-      width: 360, height: 170, left: 42, right: 344, historyRight: 110,
-      outlookLeft: 122, top: 10, middle: 66, bottom: 122, axisX: 34, labelY: 160
+      width: 360, height: 210, left: 52, right: 348, top: 16, middle: 82,
+      bottom: 148, axisX: 44, labelY: 182, yLabelX: 14, yLabelY: 82, pointRadius: 1.8
     }
   };
 
@@ -34,6 +34,12 @@
     return Date.parse(`${dateKey}T00:00:00.000Z`) / 86400000;
   }
 
+  function addDays(dateKey, amount) {
+    const date = new Date(`${dateKey}T00:00:00.000Z`);
+    date.setUTCDate(date.getUTCDate() + amount);
+    return date.toISOString().slice(0, 10);
+  }
+
   function svgElement(name, attributes = {}) {
     const element = document.createElementNS(svgNamespace, name);
     for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
@@ -43,38 +49,58 @@
   function chartGeometry(layoutName) {
     const layout = chartLayouts[layoutName];
     const issued = [...(state.chart.issued || [])]
-      .sort((a, b) => a.targetDay.localeCompare(b.targetDay))
-      .slice(-28);
+      .sort((a, b) => a.targetDay.localeCompare(b.targetDay));
     const outlook = [...(state.chart.outlook || [])]
       .sort((a, b) => a.targetDay.localeCompare(b.targetDay));
+    const activeDay = state.chart.activeDay
+      || issued.at(-1)?.targetDay
+      || (outlook[0] ? addDays(outlook[0].targetDay, -1) : null);
+    const windowStart = state.chart.windowStart || (activeDay ? addDays(activeDay, -30) : null);
+    const windowEnd = state.chart.windowEnd || (activeDay ? addDays(activeDay, 30) : null);
+    if (!activeDay || !windowStart || !windowEnd) {
+      return { past: [], future: [], issued: [], outlook: [], ticks: [], layout, activeDay, windowStart, windowEnd };
+    }
+    const span = Math.max(1, dayNumber(windowEnd) - dayNumber(windowStart));
     const pointY = (item) => layout.top + (1 - item.probability) * (layout.bottom - layout.top);
-    const placeSeries = (items, startX, endX, singleX = endX) => {
-      if (items.length === 0) return [];
-      if (items.length === 1) return [{ ...items[0], x: singleX, y: pointY(items[0]) }];
-      const firstDay = items[0].targetDay;
-      const lastDay = items[items.length - 1].targetDay;
-      const span = Math.max(1, dayNumber(lastDay) - dayNumber(firstDay));
-      return items.map((item) => ({
+    const pointX = (targetDay) => (
+      layout.left + ((dayNumber(targetDay) - dayNumber(windowStart)) / span) * (layout.right - layout.left)
+    );
+    const placeSeries = (items) => items.map((item) => ({
         ...item,
-        x: startX + ((dayNumber(item.targetDay) - dayNumber(firstDay)) / span) * (endX - startX),
+        x: pointX(item.targetDay),
         y: pointY(item)
       }));
-    };
-    const hasIssued = issued.length > 0;
+    const past = placeSeries(issued.filter((item) => (
+      item.targetDay >= windowStart && item.targetDay <= activeDay
+    )));
+    const future = placeSeries(outlook.filter((item) => (
+      item.targetDay > activeDay && item.targetDay <= windowEnd
+    )));
+    const ticks = [];
+    for (let offset = 0; offset <= span; offset += 10) {
+      const targetDay = addDays(windowStart, offset);
+      ticks.push({ targetDay, x: pointX(targetDay), active: targetDay === activeDay });
+    }
+    if (ticks.at(-1)?.targetDay !== windowEnd) {
+      ticks.push({ targetDay: windowEnd, x: pointX(windowEnd), active: windowEnd === activeDay });
+    }
     return {
       layout,
-      issued: placeSeries(issued, layout.left, layout.historyRight),
-      outlook: placeSeries(
-        outlook,
-        hasIssued ? layout.outlookLeft : layout.left,
-        layout.right,
-        hasIssued ? layout.outlookLeft : layout.left
-      )
+      past,
+      future,
+      issued: past,
+      outlook: future,
+      ticks,
+      activeDay,
+      windowStart,
+      windowEnd,
+      activeX: pointX(activeDay)
     };
   }
 
   function createChartSvg(layoutName) {
-    const { issued, outlook, layout } = chartGeometry(layoutName);
+    const geometry = chartGeometry(layoutName);
+    const { past, future, layout } = geometry;
     const suffix = layoutName === 'desktop' ? '' : '-mobile';
     const svg = svgElement('svg', {
       class: `chart-svg chart-svg-${layoutName}`,
@@ -84,12 +110,12 @@
       'data-chart': layoutName
     });
     const title = svgElement('title', { id: `chart-title${suffix}` });
-    title.textContent = 'league probability over time';
+    title.textContent = 'yernar league probability, past and future';
     const description = svgElement('desc', { id: `chart-description${suffix}` });
-    const issuedText = issued.length
-      ? `Issued forecasts: ${issued.map((point) => `${displayDate(point.targetDay)} ${point.percent}%`).join(', ')}.`
-      : 'No issued historical forecasts yet.';
-    description.textContent = `${issuedText} Seven-day outlook: ${outlook.map((point) => `${displayDate(point.targetDay)} ${point.percent}%`).join(', ')}.`;
+    const describe = (label, points) => points.length
+      ? `${label}: ${points.map((point) => `${displayDate(point.targetDay)} ${point.percent}%`).join(', ')}.`
+      : `${label}: no data.`;
+    description.textContent = `${describe('Past', past)} ${describe('Future', future)}`;
     svg.append(title, description);
 
     for (const [y, label] of [[layout.top, '100%'], [layout.middle, '50%'], [layout.bottom, '0%']]) {
@@ -99,11 +125,60 @@
       svg.append(text);
     }
 
+    svg.append(svgElement('line', {
+      class: 'chart-active-boundary',
+      x1: geometry.activeX.toFixed(2),
+      y1: layout.top,
+      x2: geometry.activeX.toFixed(2),
+      y2: layout.bottom
+    }));
+    const yLabel = svgElement('text', {
+      class: 'chart-y-label',
+      x: layout.yLabelX,
+      y: layout.yLabelY,
+      'text-anchor': 'middle',
+      transform: `rotate(-90 ${layout.yLabelX} ${layout.yLabelY})`
+    });
+    yLabel.textContent = 'probability';
+    svg.append(yLabel);
+
+    for (const tick of geometry.ticks) {
+      svg.append(svgElement('line', {
+        class: 'chart-x-tick',
+        x1: tick.x.toFixed(2),
+        y1: layout.bottom,
+        x2: tick.x.toFixed(2),
+        y2: layout.bottom + 5
+      }));
+      const date = svgElement('text', {
+        class: `chart-date${tick.active ? ' chart-date-active' : ''}`,
+        x: tick.x.toFixed(2),
+        y: layout.labelY,
+        'text-anchor': 'middle'
+      });
+      date.textContent = shortDate(tick.targetDay);
+      svg.append(date);
+    }
+
+    function continuousSegments(points) {
+      const segments = [];
+      for (const point of points) {
+        const current = segments.at(-1);
+        if (!current || dayNumber(point.targetDay) - dayNumber(current.at(-1).targetDay) !== 1) {
+          segments.push([point]);
+        } else {
+          current.push(point);
+        }
+      }
+      return segments;
+    }
+
     function addSeries(points, kind) {
-      if (points.length > 1) {
+      for (const segment of continuousSegments(points)) {
+        if (segment.length < 2) continue;
         svg.append(svgElement('polyline', {
           class: `chart-line chart-line-${kind}`,
-          points: points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')
+          points: segment.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')
         }));
       }
       for (const point of points) {
@@ -111,34 +186,17 @@
           class: `chart-point chart-point-${kind}`,
           cx: point.x.toFixed(2),
           cy: point.y.toFixed(2),
-          r: kind === 'issued' ? 4 : 3.5
+          r: layout.pointRadius
         });
         const pointTitle = svgElement('title');
-        pointTitle.textContent = `${displayDate(point.targetDay)}: ${point.percent}% ${kind === 'issued' ? 'issued' : 'outlook'}`;
+        pointTitle.textContent = `${displayDate(point.targetDay)}: ${point.percent}% ${kind}`;
         circle.append(pointTitle);
         svg.append(circle);
-        if (kind === 'outlook') {
-          const value = svgElement('text', {
-            class: 'chart-value',
-            x: point.x.toFixed(2),
-            y: Math.max(layout.top - 8, point.y - 11).toFixed(2),
-            'text-anchor': 'middle'
-          });
-          value.textContent = `${point.percent}%`;
-          const date = svgElement('text', {
-            class: 'chart-date',
-            x: point.x.toFixed(2),
-            y: layout.labelY,
-            'text-anchor': 'middle'
-          });
-          date.textContent = shortDate(point.targetDay);
-          svg.append(value, date);
-        }
       }
     }
 
-    addSeries(issued, 'issued');
-    addSeries(outlook, 'outlook');
+    addSeries(past, 'past');
+    addSeries(future, 'future');
     return svg;
   }
 
@@ -147,15 +205,14 @@
     const section = document.createElement('section');
     section.className = 'probability-chart';
     section.setAttribute('aria-labelledby', 'chart-heading');
-    const headingRow = document.createElement('div');
-    headingRow.className = 'chart-heading-row';
     const heading = document.createElement('h2');
     heading.id = 'chart-heading';
-    heading.textContent = 'probability over time';
+    heading.className = 'sr-only';
+    heading.textContent = 'league probability chart';
     const legend = document.createElement('div');
     legend.className = 'chart-legend';
     legend.setAttribute('aria-label', 'chart legend');
-    for (const [label, lineClass] of [['issued', 'legend-issued'], ['7-day outlook', 'legend-outlook']]) {
+    for (const [label, lineClass] of [['past', 'legend-past'], ['future', 'legend-future']]) {
       const item = document.createElement('span');
       const line = document.createElement('i');
       line.className = `legend-line ${lineClass}`;
@@ -163,8 +220,7 @@
       item.append(line, document.createTextNode(label));
       legend.append(item);
     }
-    headingRow.append(heading, legend);
-    section.append(headingRow, createChartSvg('desktop'), createChartSvg('mobile'));
+    section.append(heading, legend, createChartSvg('desktop'), createChartSvg('mobile'));
     chartRoot.append(section);
   }
 

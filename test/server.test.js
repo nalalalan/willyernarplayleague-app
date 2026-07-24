@@ -48,20 +48,23 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.doesNotMatch(html, /data-played="true"/);
   assert.doesNotMatch(html, /change answer/);
   assert.doesNotMatch(html, />--</);
-  assert.match(html, /<title id="chart-title">league probability over time<\/title>/);
-  assert.match(html, /Seven-day outlook: 7\/25\/26/);
-  assert.equal((html.match(/chart-point-outlook/g) || []).length, 14);
-  assert.equal((html.match(/class="chart-value"/g) || []).length, 14);
-  assert.match(html, /class="chart-line chart-line-outlook"/);
-  assert.match(html, /class="chart-point chart-point-issued"/);
+  assert.match(html, /<title id="chart-title">yernar league probability, past and future<\/title>/);
+  assert.match(html, /Future: 7\/25\/26/);
+  assert.equal((html.match(/chart-point-future/g) || []).length, 60);
+  assert.equal((html.match(/class="chart-date/g) || []).length, 14);
+  assert.doesNotMatch(html, /class="chart-value"|>probability over time</);
+  assert.match(html, /class="chart-line chart-line-future"/);
+  assert.match(html, /class="chart-point chart-point-past"/);
   assert.match(html, /class="chart-svg chart-svg-mobile"/);
+  assert.equal((html.match(/>probability<\/text>/g) || []).length, 2);
+  assert.ok(html.indexOf('>past<\/span>') < html.indexOf('>future<\/span>'));
   assert.match(html, /<h1 class="sr-only">will yernar play league\?<\/h1>/);
   assert.ok(html.indexOf('suite-ao-home') < html.indexOf('suite-app-mark'));
   assert.ok(html.indexOf('suite-app-mark') < html.indexOf('suite-app-name'));
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
   assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260723\.png"/);
-  assert.match(html, /href="\/styles\.css\?v=20260724"/);
-  assert.match(html, /src="\/app\.js\?v=20260724"/);
+  assert.match(html, /href="\/styles\.css\?v=20260724-plot61"/);
+  assert.match(html, /src="\/app\.js\?v=20260724-plot61"/);
   assert.match(html, /7\/23\/26: yernar did not play league/);
 });
 
@@ -72,9 +75,13 @@ test('state API separates solid issued forecasts from the dashed provisional out
   const state = await response.json();
   assert.equal(state.chart.issued.length, 1);
   assert.equal(state.chart.issued[0].kind, 'official');
-  assert.equal(state.chart.outlook.length, 7);
+  assert.equal(state.chart.outlook.length, 30);
   assert.ok(state.chart.outlook.every((point) => point.kind === 'outlook'));
   assert.equal(state.chart.outlook[0].targetDay, '2026-07-25');
+  assert.equal(state.chart.outlook.at(-1).targetDay, '2026-08-23');
+  assert.equal(state.chart.activeDay, '2026-07-24');
+  assert.equal(state.chart.windowStart, '2026-06-24');
+  assert.equal(state.chart.windowEnd, '2026-08-23');
   assert.deepEqual(state.chart.issued.map((point) => point.targetDay), ['2026-07-24']);
 });
 
