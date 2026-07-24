@@ -304,6 +304,10 @@ main {
 }
 
 .answer-button:focus-visible,
+.history-edit:focus-visible,
+.history-delete:focus-visible,
+.history-confirm-delete:focus-visible,
+.history-cancel-delete:focus-visible,
 .suite-ao-home:focus-visible,
 .suite-app-brand:focus-visible {
   outline: 3px solid var(--accent-dark);
@@ -328,6 +332,45 @@ main {
   padding-top: clamp(32px, 5vw, 46px);
 }
 
+.history-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-edit,
+.history-delete,
+.history-confirm-delete,
+.history-cancel-delete {
+  min-height: 32px;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.history-edit:hover:not(:disabled),
+.history-delete:hover:not(:disabled),
+.history-cancel-delete:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.history-confirm-delete {
+  color: var(--rose);
+  font-weight: 720;
+}
+
+.history-edit:disabled,
+.history-delete:disabled,
+.history-confirm-delete:disabled,
+.history-cancel-delete:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+
 .history ol {
   padding: 0;
   margin: 18px 0 0;
@@ -335,6 +378,10 @@ main {
 }
 
 .history li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
   padding: 13px 0;
   border-top: 1px solid rgba(64, 54, 48, .10);
   font-size: 15px;
@@ -343,6 +390,45 @@ main {
 
 .history li:first-child {
   border-top: 0;
+}
+
+.history-entry-text {
+  min-width: 0;
+}
+
+.history-entry-action {
+  display: none;
+  align-items: center;
+  justify-self: end;
+}
+
+.history[data-editing="true"] .history-entry-action {
+  display: inline-flex;
+}
+
+.history-confirm {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.history-confirm-label {
+  margin-right: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.history-status {
+  min-height: 18px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.history-status[data-error="true"] {
+  color: var(--rose);
 }
 
 .sr-only {
@@ -472,6 +558,18 @@ main {
 
   .history {
     padding-top: 30px;
+  }
+
+  .history li {
+    gap: 10px;
+  }
+
+  .history-edit,
+  .history-delete,
+  .history-confirm-delete,
+  .history-cancel-delete {
+    min-height: 44px;
+    padding: 8px 7px;
   }
 
   .answer-buttons {

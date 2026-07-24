@@ -309,6 +309,63 @@ test('recording No recomputes the provisional outlook but not its exact dates', 
   );
 });
 
+test('deleting a closed outcome persists as missing, removes its score, and preserves official forecasts', async (t) => {
+  const fixture = await serviceFixture(t);
+  await fixture.service.getState();
+  const recorded = await fixture.service.recordTodayNo('2026-07-24');
+  const revision = recorded.history.find((entry) => entry.dateKey === '2026-07-24').revision;
+  fixture.setInstant('2026-07-25T16:00:00.000Z');
+  const beforeDelete = await fixture.service.getState();
+  const officialBeforeDelete = structuredClone(fixture.store.getSnapshot().forecasts.official);
+  assert.equal(fixture.store.getSnapshot().metrics.scores.some((score) => score.targetDay === '2026-07-24'), true);
+  const changeCountBefore = fixture.store.getSnapshot().outcomeChanges.length;
+
+  const deleted = await fixture.service.deleteOutcome('2026-07-24', revision, '2026-07-25');
+  const stored = fixture.store.getSnapshot();
+  assert.equal(deleted.history.some((entry) => entry.dateKey === '2026-07-24'), false);
+  assert.equal(deleted.chart.past.some((point) => point.targetDay === '2026-07-24'), false);
+  assert.equal(Object.hasOwn(stored.outcomes, '2026-07-24'), false);
+  assert.equal(stored.deletedOutcomes['2026-07-24'].previousPlayed, false);
+  assert.equal(stored.metrics.scores.some((score) => score.targetDay === '2026-07-24'), false);
+  assert.deepEqual(stored.forecasts.official, officialBeforeDelete);
+  assert.notDeepEqual(deleted.outlook.points, beforeDelete.outlook.points);
+  assert.equal(stored.outcomeChanges.at(-1).played, null);
+  assert.equal(stored.outcomeChanges.at(-1).source, 'explicit-delete');
+  assert.equal(stored.audit.at(-1).action, 'delete');
+
+  const repeated = await fixture.service.deleteOutcome('2026-07-24', revision, '2026-07-25');
+  assert.equal(repeated.history.some((entry) => entry.dateKey === '2026-07-24'), false);
+  assert.equal(fixture.store.getSnapshot().outcomeChanges.length, changeCountBefore + 1);
+  await fixture.service.getState();
+  assert.equal(Object.hasOwn(fixture.store.getSnapshot().outcomes, '2026-07-24'), false);
+});
+
+test('deleting and re-recording the active No advances revision and rejects an old delete request', async (t) => {
+  const { store, service } = await serviceFixture(t);
+  const before = await service.getState();
+  const officialBefore = structuredClone(store.getSnapshot().forecasts.official['2026-07-24']);
+  const first = await service.recordTodayNo(before.activeLeagueDay);
+  const firstRevision = first.history[0].revision;
+
+  const deleted = await service.deleteOutcome('2026-07-24', firstRevision, '2026-07-24');
+  assert.equal(deleted.todayOutcome, null);
+  assert.equal(deleted.canRecordDidNotPlay, true);
+  assert.deepEqual(store.getSnapshot().forecasts.official['2026-07-24'], officialBefore);
+
+  const restored = await service.recordTodayNo('2026-07-24');
+  const restoredEntry = restored.history.find((entry) => entry.dateKey === '2026-07-24');
+  assert.equal(restoredEntry.revision, firstRevision + 1);
+  await assert.rejects(
+    service.deleteOutcome('2026-07-24', firstRevision, '2026-07-24'),
+    (error) => {
+      assert.equal(error.statusCode, 409);
+      assert.equal(error.state.history[0].revision, restoredEntry.revision);
+      return true;
+    }
+  );
+  assert.equal(store.getSnapshot().outcomes['2026-07-24'].revision, restoredEntry.revision);
+});
+
 test('no network address or personal context is persisted', async (t) => {
   const { store, service } = await serviceFixture(t);
   await service.recordTodayNo('2026-07-24');

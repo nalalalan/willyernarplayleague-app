@@ -186,7 +186,14 @@
         : `<polyline class="chart-line chart-line-future" points="${pointString(segment)}"/>`)
       .join('');
     const visibleMarkers = (points, kind) => {
-      if (kind === 'past') return points.filter((point) => point.played === false);
+      if (kind === 'past') {
+        const isolatedDays = new Set(
+          continuousSegments(points)
+            .filter((segment) => segment.length === 1)
+            .map((segment) => segment[0].targetDay)
+        );
+        return points.filter((point) => point.played === false || isolatedDays.has(point.targetDay));
+      }
       return points.filter((point, index) => (
         index === 0
         || index === points.length - 1

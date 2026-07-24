@@ -7,7 +7,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
 const { addDays } = require('../lib/time');
-const { chartGeometry, renderChart, renderPrediction } = require('../lib/view');
+const { chartGeometry, renderChart, renderHistory, renderPrediction } = require('../lib/view');
 const chartModule = require('../public/chart');
 
 function point(targetDay, percent, kind) {
@@ -76,6 +76,26 @@ test('chart uses one continuous 61-day calendar domain without inventing missing
   assert.match(html, /Past results: 5\/31\/26 did not play/);
   assert.match(html, /7\/1\/26: 70% future/);
   assert.match(html, /7\/30\/26: 74% future/);
+});
+
+test('a recorded Yes isolated by deleted days remains visible as a past marker', () => {
+  const chart = {
+    activeDay: '2026-07-24',
+    windowStart: '2026-06-24',
+    windowEnd: '2026-08-23',
+    past: [
+      result('2026-07-10', true),
+      result('2026-07-12', true),
+      result('2026-07-13', true),
+      result('2026-07-15', false)
+    ],
+    outlook: [point('2026-07-25', 80, 'outlook'), point('2026-07-26', 82, 'outlook')]
+  };
+  const html = renderChart(chart);
+  assert.equal((html.match(/chart-point chart-point-past/g) || []).length, 4);
+  assert.equal((html.match(/<title>7\/10\/26: yernar played league<\/title>/g) || []).length, 2);
+  assert.equal((html.match(/<title>7\/15\/26: yernar did not play league<\/title>/g) || []).length, 2);
+  assert.doesNotMatch(html, /<title>7\/12\/26: yernar played league<\/title>/);
 });
 
 test('server and browser use one chart renderer and one editorial layout contract', () => {
@@ -199,4 +219,19 @@ test('prediction renders no correction control after the No exception is recorde
     actionLabel: null
   });
   assert.doesNotMatch(html, /data-played|change answer/);
+});
+
+test('history renders one quiet edit control and row-specific delete metadata', () => {
+  const html = renderHistory([{
+    dateKey: '2026-07-23',
+    date: '7/23/26',
+    played: false,
+    revision: 2,
+    text: '7/23/26: yernar did not play league'
+  }]);
+  assert.match(html, /data-history-section data-editing="false"/);
+  assert.match(html, /data-history-toggle aria-expanded="false"[^>]*>edit<\/button>/);
+  assert.match(html, /data-delete-day="2026-07-23" data-delete-revision="2"/);
+  assert.match(html, /aria-label="delete 7\/23\/26 entry"/);
+  assert.doesNotMatch(html, /delete this entry\?/);
 });

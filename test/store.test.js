@@ -156,9 +156,10 @@ test('migration restores and preserves every authoritative No seed while upgradi
   assert.deepEqual(Object.keys(snapshot.outcomes).sort(), [
     '2026-07-04', '2026-07-13', '2026-07-22', '2026-07-23'
   ]);
-  assert.equal(snapshot.schemaVersion, 2);
+  assert.equal(snapshot.schemaVersion, 3);
   assert.equal(snapshot.seedVersion, 2);
   assert.deepEqual(snapshot.defaultYesPolicy, { version: 1, backfillThrough: null });
+  assert.deepEqual(snapshot.deletedOutcomes, {});
   assert.equal(snapshot.outcomes['2026-07-04'].played, false);
   assert.equal(snapshot.outcomes['2026-07-04'].source, 'authoritative-seed');
   const correction = snapshot.outcomeChanges.find((event) => event.leagueDay === '2026-07-04');
@@ -167,6 +168,24 @@ test('migration restores and preserves every authoritative No seed while upgradi
   assert.equal(correction.source, 'authoritative-seed-correction');
   assert.equal(snapshot.outcomes['2026-07-23'].played, false);
   assert.equal(snapshot.outcomes['2026-07-23'].source, 'authoritative-seed');
+});
+
+test('an explicitly deleted seed remains missing after migration and restart', async (t) => {
+  const dataDir = await temporaryDirectory(t);
+  const clock = () => new Date('2026-07-24T16:00:00.000Z');
+  const firstStore = await initializedStore(t, { dataDir });
+  const firstService = new LeagueService({ store: firstStore, clock });
+  const initial = await firstService.getState();
+  const seed = initial.history.find((entry) => entry.dateKey === '2026-07-13');
+  await firstService.deleteOutcome(seed.dateKey, seed.revision, initial.activeLeagueDay);
+
+  const reopenedStore = new StateStore({ dataDir });
+  await reopenedStore.initialize({ createDefault: createDefaultState, migrate: migrateState, validate: validateState });
+  const reopenedService = new LeagueService({ store: reopenedStore, clock });
+  const reopened = await reopenedService.getState();
+  assert.equal(reopened.history.some((entry) => entry.dateKey === seed.dateKey), false);
+  assert.equal(Object.hasOwn(reopenedStore.getSnapshot().outcomes, seed.dateKey), false);
+  assert.equal(reopenedStore.getSnapshot().deletedOutcomes[seed.dateKey].revision, seed.revision);
 });
 
 test('write queue commits concurrent mutations in arrival order', async (t) => {

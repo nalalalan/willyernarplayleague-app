@@ -66,12 +66,15 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.ok(html.indexOf('suite-app-mark') < html.indexOf('suite-app-name'));
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
   assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260723\.png"/);
-  assert.match(html, /href="\/chart\.css\?v=20260724-editorial-v2"/);
-  assert.match(html, /href="\/styles\.css\?v=20260724-editorial-v2"/);
-  assert.match(html, /src="\/chart\.js\?v=20260724-editorial-v2"/);
-  assert.match(html, /src="\/app\.js\?v=20260724-editorial-v2"/);
+  assert.match(html, /href="\/chart\.css\?v=20260724-history-delete-v1"/);
+  assert.match(html, /href="\/styles\.css\?v=20260724-history-delete-v1"/);
+  assert.match(html, /src="\/chart\.js\?v=20260724-history-delete-v1"/);
+  assert.match(html, /src="\/app\.js\?v=20260724-history-delete-v1"/);
   assert.ok(html.indexOf('src="/chart.js') < html.indexOf('src="/app.js'));
   assert.match(html, /7\/23\/26: yernar did not play league/);
+  assert.match(html, /data-history-toggle[^>]*>edit<\/button>/);
+  assert.match(html, /data-delete-day="2026-07-23" data-delete-revision="1"/);
+  assert.match(html, /aria-label="delete 7\/23\/26 entry"/);
 });
 
 test('state API separates solid recorded outcomes from the dashed provisional outlook', async (t) => {
@@ -113,6 +116,76 @@ test('valid same-origin JSON PUT saves and returns complete updated state', asyn
   assert.match(state.statement, /^yernar does not play league today\. there is a \d+% chance that he will play league tomorrow\.$/);
   assert.equal(state.tomorrowProbability, state.chart.outlook[0].percent);
   assert.equal(state.history[0].text, '7/24/26: yernar did not play league');
+});
+
+test('same-origin DELETE removes one history entry and is idempotent', async (t) => {
+  const { baseUrl, store } = await serverFixture(t);
+  const before = await (await fetch(`${baseUrl}/api/state`)).json();
+  const entry = before.history.find((item) => item.dateKey === '2026-07-13');
+  const options = {
+    method: 'DELETE',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      expectedRevision: entry.revision,
+      expectedLeagueDay: before.activeLeagueDay
+    })
+  };
+
+  const response = await fetch(`${baseUrl}/api/outcomes/2026-07-13`, options);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.has('access-control-allow-origin'), false);
+  const state = await response.json();
+  assert.equal(state.history.some((item) => item.dateKey === '2026-07-13'), false);
+  assert.equal(state.chart.past.some((point) => point.targetDay === '2026-07-13'), false);
+  assert.equal(store.getSnapshot().deletedOutcomes['2026-07-13'].revision, entry.revision);
+
+  const changeCount = store.getSnapshot().outcomeChanges.length;
+  const repeated = await fetch(`${baseUrl}/api/outcomes/2026-07-13`, options);
+  assert.equal(repeated.status, 200);
+  assert.equal(store.getSnapshot().outcomeChanges.length, changeCount);
+});
+
+test('DELETE rejects cross-origin, malformed, future, and stale requests', async (t) => {
+  const { baseUrl } = await serverFixture(t);
+  const state = await (await fetch(`${baseUrl}/api/state`)).json();
+  const body = JSON.stringify({ expectedRevision: 1, expectedLeagueDay: state.activeLeagueDay });
+
+  const missingOrigin = await fetch(`${baseUrl}/api/outcomes/2026-07-13`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body
+  });
+  assert.equal(missingOrigin.status, 403);
+
+  const crossOrigin = await fetch(`${baseUrl}/api/outcomes/2026-07-13`, {
+    method: 'DELETE',
+    headers: { Origin: 'https://example.com', 'Content-Type': 'application/json' },
+    body
+  });
+  assert.equal(crossOrigin.status, 403);
+
+  const malformed = await fetch(`${baseUrl}/api/outcomes/2026-07-13`, {
+    method: 'DELETE',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ expectedRevision: 0, expectedLeagueDay: state.activeLeagueDay })
+  });
+  assert.equal(malformed.status, 400);
+
+  const future = await fetch(`${baseUrl}/api/outcomes/2026-08-01`, {
+    method: 'DELETE',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body
+  });
+  assert.equal(future.status, 400);
+
+  const stale = await fetch(`${baseUrl}/api/outcomes/2026-07-13`, {
+    method: 'DELETE',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ expectedRevision: 99, expectedLeagueDay: state.activeLeagueDay })
+  });
+  assert.equal(stale.status, 409);
+  const stalePayload = await stale.json();
+  assert.equal(stalePayload.state.history.some((item) => item.dateKey === '2026-07-13'), true);
 });
 
 test('stale pre-cutoff tab receives fresh state without recording No on the new day', async (t) => {
@@ -195,7 +268,7 @@ test('health checks real storage writes and reports runtime, schema, and model r
   assert.equal(health.status, 'ok');
   assert.equal(health.storage.writable, true);
   assert.equal(health.storage.recoveredFromBackup, false);
-  assert.equal(health.schemaVersion, 2);
+  assert.equal(health.schemaVersion, 3);
   assert.equal(health.modelReady, true);
   assert.match(health.runtime.node, /^v\d+/);
 });

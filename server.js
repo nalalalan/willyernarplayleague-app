@@ -262,6 +262,38 @@ function createRequestHandler({
         return;
       }
 
+      const deleteOutcomeMatch = /^\/api\/outcomes\/(\d{4}-\d{2}-\d{2})$/.exec(url.pathname);
+      if (request.method === 'DELETE' && deleteOutcomeMatch) {
+        if (!isSameOriginWrite(request, canonicalOrigin)) {
+          writeJson(response, 403, { error: 'same-origin request required' });
+          return;
+        }
+        if (!throttle.allow(clientAddress(request))) {
+          writeJson(response, 429, { error: 'too many requests; try again shortly' });
+          return;
+        }
+        const body = await readJsonBody(request);
+        if (!body
+          || typeof body !== 'object'
+          || Array.isArray(body)
+          || !Number.isInteger(body.expectedRevision)
+          || body.expectedRevision < 1
+          || typeof body.expectedLeagueDay !== 'string'
+          || !/^\d{4}-\d{2}-\d{2}$/.test(body.expectedLeagueDay)
+          || Object.keys(body).some((key) => !['expectedRevision', 'expectedLeagueDay'].includes(key))) {
+          writeJson(response, 400, {
+            error: 'body must be { "expectedRevision": 1, "expectedLeagueDay": "YYYY-MM-DD" }'
+          });
+          return;
+        }
+        writeJson(response, 200, await service.deleteOutcome(
+          deleteOutcomeMatch[1],
+          body.expectedRevision,
+          body.expectedLeagueDay
+        ));
+        return;
+      }
+
       if (url.pathname.startsWith('/api/')) {
         writeJson(response, 404, { error: 'not found' });
       } else {

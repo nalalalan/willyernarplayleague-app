@@ -2,10 +2,12 @@
 
 Minimal AO Labs daily League forecast and result history.
 
-The active League day stays open until 6:00 AM Eastern. The only public action
-records the exception that Yernar did not play. If no exception is recorded,
-the closed day is finalized as played at the next cutoff. The four supplied No
-outcomes on July 4, 13, 22, and 23, 2026 remain authoritative.
+The active League day stays open until 6:00 AM Eastern. The primary public
+action records the exception that Yernar did not play. If no exception is
+recorded, the closed day is finalized as played at the next cutoff. The four
+supplied No outcomes on July 4, 13, 22, and 23, 2026 seed the initial history.
+An explicitly deleted history entry becomes an intentional missing day and is
+not recreated by seed migration or automatic Yes backfill.
 
 ## Run
 
@@ -45,6 +47,20 @@ observed cycle, and target-day outcomes remain excluded from their own forecast.
 equality precondition, never a writable target; a stale tab receives `409` and
 fresh state instead of recording against the new day. The operation is
 idempotent, and the public API does not accept Yes answers or corrections.
+
+`DELETE /api/outcomes/:leagueDay` accepts
+`{ "expectedRevision": 1, "expectedLeagueDay": "YYYY-MM-DD" }`. History
+deletion is exposed through the small `edit` control and requires row-specific
+confirmation. The revision and active-day preconditions prevent a stale page
+from deleting a changed or newly re-recorded entry. A deletion is retained as
+an audited tombstone, removes that day from model scoring and the solid past
+series, and recomputes the provisional outlook without rewriting official
+forecast snapshots. Duplicate identical deletion requests are idempotent.
+
+Both write routes require same-origin JSON and share the in-memory request
+throttle. They intentionally do not require an account, matching the app's
+public contribution model; the inline confirmation, audit trail, backup, and
+revision precondition protect against accidental or stale deletion.
 
 ## Production configuration
 
