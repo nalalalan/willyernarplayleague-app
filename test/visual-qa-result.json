@@ -1,13 +1,13 @@
 {
   "schema_version": 2,
   "artifact": "integrated-text-chart-composition",
-  "implementation_commit": "fb526af7d37205f3f617ff1b4d04b3295834c679",
+  "implementation_commit": "da87cffedc328dc9ff73f90d705dbabe12c98633",
   "source_sha256": {
     "public/chart.js": "1941C26E05F0B0B9E6FB72A7CDDA96DD27C9247317A2D4B8FE9C4AA6EA53602C",
     "public/styles.css": "FCCA04F26BE983A9BFC0689411DBDEB259A4DB15FADB6A1A32CC82F9081960A2",
     "lib/view.js": "08CED21BFC5D704D07EB951C5FD005C521F6E6327F0DD9EBDB39648B72EDE6DE",
     "public/app.js": "97A5CE1874915D8D335F464714547279438DB0DF4CD1AEBB835EEE0453A4B683",
-    "public/icon.svg": "5C0199D68D9008491EDFA019EAAFC52A1F21FBAE1B4BB99B1613C6F9C7BECB56",
+    "public/icon.svg": "A8D2BCA61120B73E1278AA352A196EE524B6459527A775E3F12CE029AC3A5BBB",
     "public/site.webmanifest": "4CCE74594AA26BAE2119975D0D48C552AECCA710FCF9793F9756E29BF4099843"
   },
   "identity": {
@@ -18,7 +18,8 @@
     "full_tile_background": false,
     "circular_footprint": true,
     "shoulders_and_chest_present": false,
-    "app_and_hub_svg_sha256": "5C0199D68D9008491EDFA019EAAFC52A1F21FBAE1B4BB99B1613C6F9C7BECB56",
+    "face_shape": "wide upper forehead tapering to a small chin",
+    "app_and_hub_svg_sha256": "A8D2BCA61120B73E1278AA352A196EE524B6459527A775E3F12CE029AC3A5BBB",
     "verified_scales_px": [214, 72, 32]
   },
   "renderer_parity": {
