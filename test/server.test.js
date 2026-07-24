@@ -297,6 +297,7 @@ test('static identity routes work and unknown routes fail closed', async (t) => 
   assert.match(iconSvg, /aria-label="yernar considering league"/);
   assert.match(iconSvg, /id="hair"/);
   assert.match(iconSvg, /id="receding-hairline"/);
+  assert.match(iconSvg, /id="face-shape"/);
   assert.match(iconSvg, /id="glass"/);
   assert.match(iconSvg, /id="eye-left"/);
   assert.match(iconSvg, /id="eye-right"/);
