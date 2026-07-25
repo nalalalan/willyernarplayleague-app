@@ -21,6 +21,16 @@
   function outcomeControls() {
     const buttons = document.createElement('div');
     buttons.className = 'answer-buttons';
+    if (state.canChangeMind) {
+      const changeMindButton = document.createElement('button');
+      changeMindButton.className = 'answer-button answer-change-mind';
+      changeMindButton.type = 'button';
+      changeMindButton.dataset.played = 'true';
+      changeMindButton.textContent = state.changeMindLabel || 'he changed his mind';
+      changeMindButton.disabled = mutating;
+      buttons.append(changeMindButton);
+      return buttons;
+    }
     const yesButton = document.createElement('button');
     yesButton.className = 'answer-button answer-affirmative';
     yesButton.type = 'button';
@@ -54,7 +64,7 @@
     status.textContent = statusText;
     if (!isError) status.style.color = 'var(--muted)';
     section.append(statement);
-    if (state.canRecordOutcome) {
+    if (state.canRecordOutcome || state.canChangeMind) {
       const answerArea = document.createElement('div');
       answerArea.className = 'answer-area';
       answerArea.dataset.answerArea = '';

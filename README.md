@@ -3,8 +3,9 @@
 Minimal AO Labs daily League forecast and result history.
 
 The active League day stays open until 6:00 AM Eastern. `yes league`
-records that Yernar played and `no league` records that he did not. Either
-answer can be changed until the cutoff. If no answer is recorded, the closed
+records that Yernar played and `no league` records that he did not. After No,
+`he changed his mind` can change the answer to Yes until the cutoff. Once Yes
+is saved, the outcome controls disappear. If no answer is recorded, the closed
 day is finalized as played. The four
 supplied No outcomes on July 4, 13, 22, and 23, 2026 seed the initial history.
 An explicitly deleted history entry becomes an intentional missing day and is

@@ -212,16 +212,31 @@ test('prediction renders the exact Yes and No actions while today is open', () =
   assert.doesNotMatch(html, /change answer|>yes<|>no</);
 });
 
-test('prediction keeps both explicit controls available after an answer', () => {
+test('prediction renders only he changed his mind after No', () => {
   const html = renderPrediction({
     statement: 'yernar does not play league today. there is a 72% chance that he will play league tomorrow.',
-    canRecordOutcome: true,
-    actionLabel: 'no league',
-    yesActionLabel: 'yes league'
+    canRecordOutcome: false,
+    canChangeMind: true,
+    changeMindLabel: 'he changed his mind'
   });
-  assert.match(html, /data-played="true">yes league<\/button>/);
-  assert.match(html, /data-played="false">no league<\/button>/);
-  assert.doesNotMatch(html, /change answer/);
+  assert.match(html, /data-played="true">he changed his mind<\/button>/);
+  assert.doesNotMatch(html, /yes league|data-played="false"/);
+});
+
+test('prediction renders no outcome controls after Yes', () => {
+  const html = renderPrediction({
+    statement: 'yernar plays league today. there is a 85% chance that he will play league tomorrow.',
+    canRecordOutcome: false,
+    canChangeMind: false
+  });
+  assert.doesNotMatch(html, /data-played=|answer-area|he changed his mind/);
+});
+
+test('Yes and No share the same warm salmon button treatment', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'styles.css'), 'utf8');
+  assert.match(css, /--salmon: #d98573;/);
+  assert.match(css, /\.answer-button \{[\s\S]*border: 1px solid var\(--salmon\);[\s\S]*background: var\(--salmon\);/);
+  assert.doesNotMatch(css, /\.answer-(?:affirmative|exception)\s*\{/);
 });
 
 test('history renders one quiet edit control and row-specific delete metadata', () => {

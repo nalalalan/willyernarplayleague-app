@@ -67,9 +67,9 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
   assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260724-v4\.png"/);
   assert.match(html, /href="\/chart\.css\?v=20260724-ticks-only-v1"/);
-  assert.match(html, /href="\/styles\.css\?v=20260724-yes-league-v1"/);
+  assert.match(html, /href="\/styles\.css\?v=20260724-outcome-states-v1"/);
   assert.match(html, /src="\/chart\.js\?v=20260724-ticks-only-v1"/);
-  assert.match(html, /src="\/app\.js\?v=20260724-yes-league-v2"/);
+  assert.match(html, /src="\/app\.js\?v=20260724-outcome-states-v1"/);
   assert.ok(html.indexOf('src="/chart.js') < html.indexOf('src="/app.js'));
   assert.match(html, /7\/23\/26: yernar did not play league/);
   assert.match(html, /data-history-toggle[^>]*>edit<\/button>/);
@@ -116,8 +116,13 @@ test('valid same-origin JSON PUT saves No and returns complete updated state', a
   assert.match(state.statement, /^yernar does not play league today\. there is a \d+% chance that he will play league tomorrow\.$/);
   assert.equal(state.tomorrowProbability, state.chart.outlook[0].percent);
   assert.equal(state.history[0].text, '7/24/26: yernar did not play league');
-  assert.equal(state.canRecordOutcome, true);
-  assert.equal(state.yesActionLabel, 'yes league');
+  assert.equal(state.canRecordOutcome, false);
+  assert.equal(state.canChangeMind, true);
+  assert.equal(state.changeMindLabel, 'he changed his mind');
+  assert.equal(state.yesActionLabel, null);
+  const noHtml = await (await fetch(`${baseUrl}/`)).text();
+  assert.match(noHtml, /data-played="true">he changed his mind<\/button>/);
+  assert.doesNotMatch(noHtml, /data-played="false">no league<\/button>/);
 });
 
 test('valid same-origin Yes can replace No and repeated Yes is idempotent', async (t) => {
@@ -132,8 +137,12 @@ test('valid same-origin Yes can replace No and repeated Yes is idempotent', asyn
   assert.equal(yesResponse.status, 200);
   const yesState = await yesResponse.json();
   assert.equal(yesState.todayOutcome, true);
+  assert.equal(yesState.canRecordOutcome, false);
+  assert.equal(yesState.canChangeMind, false);
   assert.match(yesState.statement, /^yernar plays league today\. there is a \d+% chance that he will play league tomorrow\.$/);
   assert.equal(yesState.history[0].text, '7/24/26: yernar played league');
+  const yesHtml = await (await fetch(`${baseUrl}/`)).text();
+  assert.doesNotMatch(yesHtml, /data-played=/);
   assert.equal((await request(true)).status, 200);
   const stored = store.getSnapshot();
   assert.equal(stored.outcomes['2026-07-24'].source, 'explicit-yes');
