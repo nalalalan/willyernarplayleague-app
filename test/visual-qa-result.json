@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "artifact": "integrated-text-chart-composition",
-  "implementation_commit": "61fb46f427e9eebe3f55f3eeabc9a7ba4c61f65f",
+  "implementation_commit": "ce5f53de60e981c946500f80cf797af5b65bba14",
   "source_sha256": {
     "public/chart.js": "1941C26E05F0B0B9E6FB72A7CDDA96DD27C9247317A2D4B8FE9C4AA6EA53602C",
     "public/styles.css": "7F63C1BA651102830404F8AA68957D6C9A79ECD01CBF00D2C0B1D56ACC6462E7",
-    "lib/view.js": "DDC2BEE3F685F9B78D97C073CE56AF27405353A3098130E407F39FDF2CFD5B21",
-    "public/app.js": "ADFC16CC83A8170DC670CE01E92EC1E50B8DD171AE5016EECB15A240D4E9F193",
+    "lib/view.js": "57AE2A1986FA3DD514E3CFAE47BBF1F53F86E5EDBBBA14DD62CC995CD23E31FB",
+    "public/app.js": "F837A62F9710D6325FABB321DCB4D2D6B32C039F61E8F629983974E93CCD19A9",
     "public/icon.svg": "CE1D183C8C7BC7300A6A434DBA3D14F5C8C2775DD88AA0A26027ED58BC677CB7",
     "public/site.webmanifest": "34101539737AEBB70DF737BC6DFEB9FBD1222C9869C17657AC326F54CAD79636"
   },
@@ -43,7 +43,7 @@
     "overflow": false
   },
   "primary_action": {
-    "labels": ["yes league slay", "no league"],
+    "labels": ["yes league", "no league"],
     "yes_visual_weight": "filled",
     "no_visual_weight": "outlined",
     "ssr_matches_client": true,
