@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "artifact": "integrated-text-chart-composition",
-  "implementation_commit": "9cb8f3195787cafd1f2f3657de8d54fc630c668d",
+  "implementation_commit": "61fb46f427e9eebe3f55f3eeabc9a7ba4c61f65f",
   "source_sha256": {
     "public/chart.js": "1941C26E05F0B0B9E6FB72A7CDDA96DD27C9247317A2D4B8FE9C4AA6EA53602C",
-    "public/styles.css": "FCCA04F26BE983A9BFC0689411DBDEB259A4DB15FADB6A1A32CC82F9081960A2",
-    "lib/view.js": "428C975084D8765D7EE0F1764B3638CA4397254DAF9D4BCFFBDA238D2EAF7D1D",
-    "public/app.js": "97A5CE1874915D8D335F464714547279438DB0DF4CD1AEBB835EEE0453A4B683",
+    "public/styles.css": "7F63C1BA651102830404F8AA68957D6C9A79ECD01CBF00D2C0B1D56ACC6462E7",
+    "lib/view.js": "DDC2BEE3F685F9B78D97C073CE56AF27405353A3098130E407F39FDF2CFD5B21",
+    "public/app.js": "ADFC16CC83A8170DC670CE01E92EC1E50B8DD171AE5016EECB15A240D4E9F193",
     "public/icon.svg": "CE1D183C8C7BC7300A6A434DBA3D14F5C8C2775DD88AA0A26027ED58BC677CB7",
     "public/site.webmanifest": "34101539737AEBB70DF737BC6DFEB9FBD1222C9869C17657AC326F54CAD79636"
   },
@@ -43,12 +43,17 @@
     "overflow": false
   },
   "primary_action": {
-    "label": "no league",
+    "labels": ["yes league slay", "no league"],
+    "yes_visual_weight": "filled",
+    "no_visual_weight": "outlined",
     "ssr_matches_client": true,
     "desktop_visible": true,
     "mobile_visible": true,
-    "mobile_height_px": 48,
-    "click_records_no_in_disposable_state": true,
+    "desktop_button_heights_px": [48, 48],
+    "mobile_button_heights_px": [48, 48],
+    "click_records_yes_in_disposable_state": true,
+    "click_changes_yes_to_no_in_disposable_state": true,
+    "production_history_mutated": false,
     "overflow": false
   },
   "axis": {
