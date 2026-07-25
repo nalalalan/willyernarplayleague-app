@@ -2,7 +2,7 @@
 
 Minimal AO Labs daily League forecast and result history.
 
-The active League day stays open until 6:00 AM Eastern. `yes league slay`
+The active League day stays open until 6:00 AM Eastern. `yes league`
 records that Yernar played and `no league` records that he did not. Either
 answer can be changed until the cutoff. If no answer is recorded, the closed
 day is finalized as played. The four

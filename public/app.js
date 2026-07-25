@@ -25,7 +25,7 @@
     yesButton.className = 'answer-button answer-affirmative';
     yesButton.type = 'button';
     yesButton.dataset.played = 'true';
-    yesButton.textContent = state.yesActionLabel || 'yes league slay';
+    yesButton.textContent = state.yesActionLabel || 'yes league';
     yesButton.disabled = mutating;
     const noButton = document.createElement('button');
     noButton.className = 'answer-button answer-exception';

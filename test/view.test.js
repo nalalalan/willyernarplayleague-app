@@ -204,9 +204,9 @@ test('prediction renders the exact Yes and No actions while today is open', () =
     statement: 'there is a 75% chance that yernar will play league today',
     canRecordOutcome: true,
     actionLabel: 'no league',
-    yesActionLabel: 'yes league slay'
+    yesActionLabel: 'yes league'
   });
-  assert.match(html, /data-played="true">yes league slay<\/button>/);
+  assert.match(html, /data-played="true">yes league<\/button>/);
   assert.match(html, /data-played="false">no league<\/button>/);
   assert.ok(html.indexOf('data-played="true"') < html.indexOf('data-played="false"'));
   assert.doesNotMatch(html, /change answer|>yes<|>no</);
@@ -217,9 +217,9 @@ test('prediction keeps both explicit controls available after an answer', () => 
     statement: 'yernar does not play league today. there is a 72% chance that he will play league tomorrow.',
     canRecordOutcome: true,
     actionLabel: 'no league',
-    yesActionLabel: 'yes league slay'
+    yesActionLabel: 'yes league'
   });
-  assert.match(html, /data-played="true">yes league slay<\/button>/);
+  assert.match(html, /data-played="true">yes league<\/button>/);
   assert.match(html, /data-played="false">no league<\/button>/);
   assert.doesNotMatch(html, /change answer/);
 });

@@ -54,7 +54,7 @@ test('first request backfills every closed day as Yes except the four authoritat
   assert.equal(state.canRecordOutcome, true);
   assert.equal(state.canRecordDidNotPlay, true);
   assert.equal(state.actionLabel, 'no league');
-  assert.equal(state.yesActionLabel, 'yes league slay');
+  assert.equal(state.yesActionLabel, 'yes league');
   assert.equal(state.chart.activeDay, '2026-07-24');
   assert.equal(state.chart.windowStart, '2026-06-24');
   assert.equal(state.chart.windowEnd, '2026-08-23');
@@ -94,7 +94,7 @@ test('public service accepts explicit Yes and No, stays idempotent, and keeps th
   const sameYes = await service.recordTodayOutcome(true, '2026-07-24');
   assert.equal(yes.todayOutcome, true);
   assert.equal(yes.canRecordOutcome, true);
-  assert.equal(yes.yesActionLabel, 'yes league slay');
+  assert.equal(yes.yesActionLabel, 'yes league');
   assert.equal(yes.statement, `yernar plays league today. there is a ${yes.tomorrowProbability}% chance that he will play league tomorrow.`);
   assert.deepEqual(sameYes, yes);
   assert.deepEqual(yes.chart.past.at(-1), {

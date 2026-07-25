@@ -44,7 +44,7 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /there is a 85% chance that yernar will play league today/);
-  assert.match(html, /data-played="true">yes league slay</);
+  assert.match(html, /data-played="true">yes league</);
   assert.match(html, /data-played="false">no league</);
   assert.doesNotMatch(html, /change answer/);
   assert.doesNotMatch(html, />--</);
@@ -69,7 +69,7 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.match(html, /href="\/chart\.css\?v=20260724-ticks-only-v1"/);
   assert.match(html, /href="\/styles\.css\?v=20260724-yes-league-v1"/);
   assert.match(html, /src="\/chart\.js\?v=20260724-ticks-only-v1"/);
-  assert.match(html, /src="\/app\.js\?v=20260724-yes-league-v1"/);
+  assert.match(html, /src="\/app\.js\?v=20260724-yes-league-v2"/);
   assert.ok(html.indexOf('src="/chart.js') < html.indexOf('src="/app.js'));
   assert.match(html, /7\/23\/26: yernar did not play league/);
   assert.match(html, /data-history-toggle[^>]*>edit<\/button>/);
@@ -117,7 +117,7 @@ test('valid same-origin JSON PUT saves No and returns complete updated state', a
   assert.equal(state.tomorrowProbability, state.chart.outlook[0].percent);
   assert.equal(state.history[0].text, '7/24/26: yernar did not play league');
   assert.equal(state.canRecordOutcome, true);
-  assert.equal(state.yesActionLabel, 'yes league slay');
+  assert.equal(state.yesActionLabel, 'yes league');
 });
 
 test('valid same-origin Yes can replace No and repeated Yes is idempotent', async (t) => {
