@@ -296,6 +296,17 @@ main {
   color: var(--ink);
 }
 
+.answer-affirmative {
+  border: 1px solid var(--accent-dark);
+  background: var(--accent-dark);
+  color: var(--surface);
+}
+
+.answer-affirmative:hover:not(:disabled) {
+  background: #604c64;
+  border-color: #604c64;
+}
+
 .answer-button:focus-visible,
 .history-edit:focus-visible,
 .history-delete:focus-visible,

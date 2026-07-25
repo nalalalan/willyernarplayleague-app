@@ -2,9 +2,10 @@
 
 Minimal AO Labs daily League forecast and result history.
 
-The active League day stays open until 6:00 AM Eastern. The primary public
-action records the exception that Yernar did not play. If no exception is
-recorded, the closed day is finalized as played at the next cutoff. The four
+The active League day stays open until 6:00 AM Eastern. `yes league slay`
+records that Yernar played and `no league` records that he did not. Either
+answer can be changed until the cutoff. If no answer is recorded, the closed
+day is finalized as played. The four
 supplied No outcomes on July 4, 13, 22, and 23, 2026 seed the initial history.
 An explicitly deleted history entry becomes an intentional missing day and is
 not recreated by seed migration or automatic Yes backfill.
@@ -42,11 +43,11 @@ caps pattern confidence so predicted crash days become visible troughs without
 ever becoming 0% or 100% forecasts. Simulated outlook paths cannot re-anchor the
 observed cycle, and target-day outcomes remain excluded from their own forecast.
 
-`PUT /api/outcomes/today` accepts only
-`{ "played": false, "expectedLeagueDay": "YYYY-MM-DD" }`. The day value is an
+`PUT /api/outcomes/today` accepts
+`{ "played": true|false, "expectedLeagueDay": "YYYY-MM-DD" }`. The day value is an
 equality precondition, never a writable target; a stale tab receives `409` and
 fresh state instead of recording against the new day. The operation is
-idempotent, and the public API does not accept Yes answers or corrections.
+idempotent, and the latest explicit answer before cutoff is canonical.
 
 `DELETE /api/outcomes/:leagueDay` accepts
 `{ "expectedRevision": 1, "expectedLeagueDay": "YYYY-MM-DD" }`. History

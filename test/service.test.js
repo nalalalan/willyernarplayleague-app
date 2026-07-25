@@ -51,8 +51,10 @@ test('first request backfills every closed day as Yes except the four authoritat
   assert.equal(state.todayOutcome, null);
   assert.equal(state.todayProbability, 85);
   assert.equal(state.statement, 'there is a 85% chance that yernar will play league today');
+  assert.equal(state.canRecordOutcome, true);
   assert.equal(state.canRecordDidNotPlay, true);
   assert.equal(state.actionLabel, 'no league');
+  assert.equal(state.yesActionLabel, 'yes league slay');
   assert.equal(state.chart.activeDay, '2026-07-24');
   assert.equal(state.chart.windowStart, '2026-06-24');
   assert.equal(state.chart.windowEnd, '2026-08-23');
@@ -81,33 +83,46 @@ test('official forecast is created after closed-day backfill and remains frozen'
   assert.deepEqual(store.getSnapshot().forecasts.official['2026-07-24'], official);
 });
 
-test('public service accepts only the idempotent did-not-play exception', async (t) => {
+test('public service accepts explicit Yes and No, stays idempotent, and keeps the latest answer', async (t) => {
   const { store, service } = await serviceFixture(t);
   await service.getState();
   const before = store.getSnapshot();
   assert.equal(typeof service.setTodayOutcome, 'undefined');
   assert.deepEqual(store.getSnapshot(), before);
 
-  const first = await service.recordTodayNo('2026-07-24');
-  const second = await service.recordTodayNo('2026-07-24');
-  assert.equal(first.todayOutcome, false);
-  assert.equal(first.canRecordDidNotPlay, false);
-  assert.equal(first.actionLabel, null);
-  assert.equal(first.statement, `yernar does not play league today. there is a ${first.tomorrowProbability}% chance that he will play league tomorrow.`);
-  assert.equal(first.tomorrowProbability, first.outlook.points[0].percent);
-  assert.equal(first.chart.past.length, 21);
-  assert.deepEqual(first.chart.past.at(-1), {
+  const yes = await service.recordTodayOutcome(true, '2026-07-24');
+  const sameYes = await service.recordTodayOutcome(true, '2026-07-24');
+  assert.equal(yes.todayOutcome, true);
+  assert.equal(yes.canRecordOutcome, true);
+  assert.equal(yes.yesActionLabel, 'yes league slay');
+  assert.equal(yes.statement, `yernar plays league today. there is a ${yes.tomorrowProbability}% chance that he will play league tomorrow.`);
+  assert.deepEqual(sameYes, yes);
+  assert.deepEqual(yes.chart.past.at(-1), {
+    targetDay: '2026-07-24',
+    probability: 1,
+    percent: 100,
+    played: true,
+    kind: 'outcome'
+  });
+
+  const no = await service.recordTodayOutcome(false, '2026-07-24');
+  const sameNo = await service.recordTodayNo('2026-07-24');
+  assert.equal(no.todayOutcome, false);
+  assert.equal(no.statement, `yernar does not play league today. there is a ${no.tomorrowProbability}% chance that he will play league tomorrow.`);
+  assert.equal(no.tomorrowProbability, no.outlook.points[0].percent);
+  assert.equal(no.chart.past.length, 21);
+  assert.deepEqual(no.chart.past.at(-1), {
     targetDay: '2026-07-24',
     probability: 0,
     percent: 0,
     played: false,
     kind: 'outcome'
   });
-  assert.deepEqual(second, first);
+  assert.deepEqual(sameNo, no);
   const stored = store.getSnapshot();
   assert.equal(stored.outcomes['2026-07-24'].source, 'explicit-no');
-  assert.equal(stored.outcomeChanges.filter((event) => event.leagueDay === '2026-07-24').length, 1);
-  assert.equal(stored.audit.filter((event) => event.leagueDay === '2026-07-24').length, 1);
+  assert.equal(stored.outcomeChanges.filter((event) => event.leagueDay === '2026-07-24').length, 2);
+  assert.equal(stored.audit.filter((event) => event.leagueDay === '2026-07-24').length, 2);
 });
 
 test('an unanswered day stays unresolved through 5:59 AM and finalizes Yes at 6:00 AM', async (t) => {
@@ -238,7 +253,7 @@ test('stale short or older-method outlook caches are replaced without changing o
   assert.deepEqual(store.getSnapshot().forecasts.official, frozenOfficial);
 });
 
-test('legacy active Yes remains valid while new public Yes writes are impossible', async (t) => {
+test('an active Yes remains valid and can still be changed before cutoff', async (t) => {
   const { store, service } = await serviceFixture(t);
   let frozenOfficial;
   await store.update((state) => {
@@ -255,9 +270,13 @@ test('legacy active Yes remains valid while new public Yes writes are impossible
   });
   const state = await service.getState();
   assert.equal(state.todayOutcome, true);
-  assert.equal(state.canRecordDidNotPlay, false);
+  assert.equal(state.canRecordOutcome, true);
+  assert.equal(state.canRecordDidNotPlay, true);
   assert.deepEqual(store.getSnapshot().forecasts.official['2026-07-24'], frozenOfficial);
   assert.equal(typeof service.setTodayOutcome, 'undefined');
+  const changed = await service.recordTodayOutcome(false, '2026-07-24');
+  assert.equal(changed.todayOutcome, false);
+  assert.equal(store.getSnapshot().outcomes['2026-07-24'].source, 'explicit-no');
 });
 
 for (const boundary of [
@@ -349,6 +368,7 @@ test('deleting and re-recording the active No advances revision and rejects an o
 
   const deleted = await service.deleteOutcome('2026-07-24', firstRevision, '2026-07-24');
   assert.equal(deleted.todayOutcome, null);
+  assert.equal(deleted.canRecordOutcome, true);
   assert.equal(deleted.canRecordDidNotPlay, true);
   assert.deepEqual(store.getSnapshot().forecasts.official['2026-07-24'], officialBefore);
 

@@ -251,14 +251,14 @@ function createRequestHandler({
         if (!body
           || typeof body !== 'object'
           || Array.isArray(body)
-          || body.played !== false
+          || typeof body.played !== 'boolean'
           || typeof body.expectedLeagueDay !== 'string'
           || !/^\d{4}-\d{2}-\d{2}$/.test(body.expectedLeagueDay)
           || Object.keys(body).some((key) => !['played', 'expectedLeagueDay'].includes(key))) {
-          writeJson(response, 400, { error: 'body must be { "played": false, "expectedLeagueDay": "YYYY-MM-DD" }' });
+          writeJson(response, 400, { error: 'body must be { "played": true|false, "expectedLeagueDay": "YYYY-MM-DD" }' });
           return;
         }
-        writeJson(response, 200, await service.recordTodayNo(body.expectedLeagueDay));
+        writeJson(response, 200, await service.recordTodayOutcome(body.played, body.expectedLeagueDay));
         return;
       }
 

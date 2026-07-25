@@ -199,24 +199,29 @@ test('tracked visual QA evidence remains bound to the integrated composition sou
   assert.ok(mobile.rendered_tick_font_px >= result.acceptance.minimum_mobile_rendered_tick_font_px);
 });
 
-test('prediction renders only the single did-not-play exception action while today is open', () => {
+test('prediction renders the exact Yes and No actions while today is open', () => {
   const html = renderPrediction({
     statement: 'there is a 75% chance that yernar will play league today',
-    canRecordDidNotPlay: true,
-    actionLabel: 'no league'
+    canRecordOutcome: true,
+    actionLabel: 'no league',
+    yesActionLabel: 'yes league slay'
   });
+  assert.match(html, /data-played="true">yes league slay<\/button>/);
   assert.match(html, /data-played="false">no league<\/button>/);
-  assert.doesNotMatch(html, /data-played="true"/);
+  assert.ok(html.indexOf('data-played="true"') < html.indexOf('data-played="false"'));
   assert.doesNotMatch(html, /change answer|>yes<|>no</);
 });
 
-test('prediction renders no correction control after the No exception is recorded', () => {
+test('prediction keeps both explicit controls available after an answer', () => {
   const html = renderPrediction({
     statement: 'yernar does not play league today. there is a 72% chance that he will play league tomorrow.',
-    canRecordDidNotPlay: false,
-    actionLabel: null
+    canRecordOutcome: true,
+    actionLabel: 'no league',
+    yesActionLabel: 'yes league slay'
   });
-  assert.doesNotMatch(html, /data-played|change answer/);
+  assert.match(html, /data-played="true">yes league slay<\/button>/);
+  assert.match(html, /data-played="false">no league<\/button>/);
+  assert.doesNotMatch(html, /change answer/);
 });
 
 test('history renders one quiet edit control and row-specific delete metadata', () => {

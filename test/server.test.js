@@ -44,8 +44,8 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /there is a 85% chance that yernar will play league today/);
+  assert.match(html, /data-played="true">yes league slay</);
   assert.match(html, /data-played="false">no league</);
-  assert.doesNotMatch(html, /data-played="true"/);
   assert.doesNotMatch(html, /change answer/);
   assert.doesNotMatch(html, />--</);
   assert.match(html, /<title id="chart-title">yernar league probability, past and future<\/title>/);
@@ -67,9 +67,9 @@ test('SSR first paint contains real probability, exact controls, accessible plot
   assert.match(html, /<link rel="canonical" href="https:\/\/willyernarplayleague\.aolabs\.io\/">/);
   assert.match(html, /property="og:image" content="https:\/\/aolabs\.io\/previews\/willyernarplayleague-20260724-v4\.png"/);
   assert.match(html, /href="\/chart\.css\?v=20260724-ticks-only-v1"/);
-  assert.match(html, /href="\/styles\.css\?v=20260724-ticks-only-v1"/);
+  assert.match(html, /href="\/styles\.css\?v=20260724-yes-league-v1"/);
   assert.match(html, /src="\/chart\.js\?v=20260724-ticks-only-v1"/);
-  assert.match(html, /src="\/app\.js\?v=20260724-ticks-only-v1"/);
+  assert.match(html, /src="\/app\.js\?v=20260724-yes-league-v1"/);
   assert.ok(html.indexOf('src="/chart.js') < html.indexOf('src="/app.js'));
   assert.match(html, /7\/23\/26: yernar did not play league/);
   assert.match(html, /data-history-toggle[^>]*>edit<\/button>/);
@@ -102,7 +102,7 @@ test('state API separates solid recorded outcomes from the dashed provisional ou
   assert.deepEqual(state.chart.issued.map((point) => point.targetDay), ['2026-07-24']);
 });
 
-test('valid same-origin JSON PUT saves and returns complete updated state', async (t) => {
+test('valid same-origin JSON PUT saves No and returns complete updated state', async (t) => {
   const { baseUrl } = await serverFixture(t);
   const response = await fetch(`${baseUrl}/api/outcomes/today`, {
     method: 'PUT',
@@ -116,6 +116,28 @@ test('valid same-origin JSON PUT saves and returns complete updated state', asyn
   assert.match(state.statement, /^yernar does not play league today\. there is a \d+% chance that he will play league tomorrow\.$/);
   assert.equal(state.tomorrowProbability, state.chart.outlook[0].percent);
   assert.equal(state.history[0].text, '7/24/26: yernar did not play league');
+  assert.equal(state.canRecordOutcome, true);
+  assert.equal(state.yesActionLabel, 'yes league slay');
+});
+
+test('valid same-origin Yes can replace No and repeated Yes is idempotent', async (t) => {
+  const { baseUrl, store } = await serverFixture(t);
+  const request = (played) => fetch(`${baseUrl}/api/outcomes/today`, {
+    method: 'PUT',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ played, expectedLeagueDay: '2026-07-24' })
+  });
+  assert.equal((await request(false)).status, 200);
+  const yesResponse = await request(true);
+  assert.equal(yesResponse.status, 200);
+  const yesState = await yesResponse.json();
+  assert.equal(yesState.todayOutcome, true);
+  assert.match(yesState.statement, /^yernar plays league today\. there is a \d+% chance that he will play league tomorrow\.$/);
+  assert.equal(yesState.history[0].text, '7/24/26: yernar played league');
+  assert.equal((await request(true)).status, 200);
+  const stored = store.getSnapshot();
+  assert.equal(stored.outcomes['2026-07-24'].source, 'explicit-yes');
+  assert.equal(stored.outcomeChanges.filter((event) => event.leagueDay === '2026-07-24').length, 2);
 });
 
 test('same-origin DELETE removes one history entry and is idempotent', async (t) => {
@@ -231,12 +253,12 @@ test('cross-origin writes, wrong content type, invalid shape, and oversized bodi
   });
   assert.equal(wrongType.status, 415);
 
-  const cachedYesClient = await fetch(`${baseUrl}/api/outcomes/today`, {
+  const invalidPlayed = await fetch(`${baseUrl}/api/outcomes/today`, {
     method: 'PUT',
     headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ played: true, expectedLeagueDay: '2026-07-24' })
+    body: JSON.stringify({ played: 'yes', expectedLeagueDay: '2026-07-24' })
   });
-  assert.equal(cachedYesClient.status, 400);
+  assert.equal(invalidPlayed.status, 400);
 
   const missingPrecondition = await fetch(`${baseUrl}/api/outcomes/today`, {
     method: 'PUT',

@@ -18,16 +18,22 @@
     chartRoot.innerHTML = chartRenderer.renderChart(state.chart);
   }
 
-  function exceptionControl() {
+  function outcomeControls() {
     const buttons = document.createElement('div');
     buttons.className = 'answer-buttons';
-    const button = document.createElement('button');
-    button.className = 'answer-button answer-exception';
-    button.type = 'button';
-    button.dataset.played = 'false';
-    button.textContent = state.actionLabel || 'no league';
-    button.disabled = mutating;
-    buttons.append(button);
+    const yesButton = document.createElement('button');
+    yesButton.className = 'answer-button answer-affirmative';
+    yesButton.type = 'button';
+    yesButton.dataset.played = 'true';
+    yesButton.textContent = state.yesActionLabel || 'yes league slay';
+    yesButton.disabled = mutating;
+    const noButton = document.createElement('button');
+    noButton.className = 'answer-button answer-exception';
+    noButton.type = 'button';
+    noButton.dataset.played = 'false';
+    noButton.textContent = state.actionLabel || 'no league';
+    noButton.disabled = mutating;
+    buttons.append(yesButton, noButton);
     return buttons;
   }
 
@@ -48,11 +54,11 @@
     status.textContent = statusText;
     if (!isError) status.style.color = 'var(--muted)';
     section.append(statement);
-    if (state.canRecordDidNotPlay) {
+    if (state.canRecordOutcome) {
       const answerArea = document.createElement('div');
       answerArea.className = 'answer-area';
       answerArea.dataset.answerArea = '';
-      answerArea.append(exceptionControl());
+      answerArea.append(outcomeControls());
       section.append(answerArea);
     }
     section.append(status);
@@ -133,7 +139,7 @@
     historyRoot.append(section);
   }
 
-  async function saveOutcome() {
+  async function saveOutcome(played) {
     if (mutating) return;
     mutating = true;
     renderPrediction('saving...');
@@ -142,7 +148,7 @@
       const response = await fetch('/api/outcomes/today', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ played: false, expectedLeagueDay: state.activeLeagueDay })
+        body: JSON.stringify({ played, expectedLeagueDay: state.activeLeagueDay })
       });
       const payload = await response.json();
       if (response.status === 409 && payload.state) {
@@ -207,7 +213,9 @@
 
   predictionRoot.addEventListener('click', (event) => {
     const answer = event.target.closest('[data-played]');
-    if (answer?.dataset.played === 'false') saveOutcome();
+    if (answer?.dataset.played === 'true' || answer?.dataset.played === 'false') {
+      saveOutcome(answer.dataset.played === 'true');
+    }
   });
 
   historyRoot.addEventListener('click', (event) => {
